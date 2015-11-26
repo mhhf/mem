@@ -82,7 +82,11 @@ if( config.is ) {
   
     var schema = config.ipfs().catJsonSync( _langIpfs );
     
-    var valid = tv4.validate( _data, schema );
+    if( config['-l'] ) {
+      var valid = tv4.validate( config.ipfs().catJsonSync(_data), schema );
+    } else {
+      var valid = tv4.validate( _data, schema );
+    }
     if( !valid ) {
       console.log( tv4.error.message );
       throw Error(' Data is not valid in Language ', tv4.error.message );
