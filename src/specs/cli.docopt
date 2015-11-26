@@ -11,7 +11,6 @@ Usage:
   mem vote       <name> <candidate> <vote>
   
   mem is <path> a <name>
-  mem publish   <name> <path>
   
   mem chain list
   mem chain select <name>

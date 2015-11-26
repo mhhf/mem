@@ -40,14 +40,6 @@ if( config.is ) {
     console.log('indeed it is!'.green.bold);
   }
 
-} else if( config.publish ) {
-  
-  var file = fs.readFileSync( app['<path>'], 'utf8' );
-  var json = JSON.parse( file );
-  var ipfsLink = config.ipfs().addJsonSync(json);
-  var spr = config.contracts.spore();
-  spr.instance.registerPackage( app['<name>'], ipfsLink );
-
 } else if( config.chain ) {
   
   CHAIN(config);
