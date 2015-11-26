@@ -1,0 +1,19 @@
+Decentral Json-evolution and verification tool
+
+Usage:
+  mem new        <name> [--lang=FIN] [--size=10000]
+  mem info       <name>
+  mem get        <name>
+  mem send       <name> <address> <value>
+  mem balanceOf  <name> <address> 
+  mem propose    <name> <path>
+  mem candidates <name>
+  mem vote       <name> <candidate> <vote>
+  
+  mem is <path> a <name>
+  mem publish   <name> <path>
+  
+  mem chain list
+  mem chain select <name>
+  mem chain add    <name>
+  mem chain remove <name>

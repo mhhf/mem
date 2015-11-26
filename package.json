@@ -1,0 +1,49 @@
+{
+  "name": "json-vote",
+  "version": "1.0.0",
+  "description": "Decentral Json voting and type system",
+  "main": "index.js",
+  "bin": {
+    "mem": "index.es6"
+  },
+  "scripts": {
+    "test": "mocha test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/mhhf/json-voting.git"
+  },
+  "keywords": [
+    "json",
+    "ethereum",
+    "voting",
+    "proposal"
+  ],
+  "author": "Denis Erfurt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mhhf/json-voting/issues"
+  },
+  "homepage": "https://github.com/mhhf/json-voting#readme",
+  "dependencies": {
+    "async": "^1.5.0",
+    "colors": "^1.1.2",
+    "deasync": "^0.1.4",
+    "docco": "^0.7.0",
+    "docopt": "^0.6.2",
+    "ether-pudding": "^1.0.3",
+    "fs-extra": "^0.26.2",
+    "ipfs-api": "^2.7.4",
+    "ipfs-js": "0.0.7",
+    "jsondiffpatch": "^0.1.37",
+    "lodash": "^3.10.1",
+    "readline-sync": "^1.2.21",
+    "shelljs": "^0.5.3",
+    "tv4": "^1.2.7",
+    "web3": "^0.15.1"
+  },
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4"
+  }
+}
