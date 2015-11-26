@@ -27,6 +27,7 @@
   "homepage": "https://github.com/mhhf/json-voting#readme",
   "dependencies": {
     "async": "^1.5.0",
+    "bluebird": "^3.0.5",
     "colors": "^1.1.2",
     "deasync": "^0.1.4",
     "docco": "^0.7.0",

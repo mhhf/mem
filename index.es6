@@ -6,6 +6,8 @@ var fs     = require('fs-extra');
 var CONFIG = require( './src/lib/config.es6' );
 var CHAIN  = require( './src/lib/chain.es6' );
 var tv4    = require('tv4');
+var Bluebird = require('bluebird');
+var path   = require('path');
 
 var cli = fs.readFileSync(__dirname + `/src/specs/cli.docopt`,'utf8');
 
@@ -52,40 +54,77 @@ if( config.is ) {
   
 } else if( config.get ) {
   
-  console.log('Get consens');
-
   var org = config.contracts.org();
   var _orga = config['<name>'];
 
   org.getConsens.call( _orga ).then( consens => {
-    console.log('Consens:', consens);
+    
+    var data = config.ipfs().catJsonSync( consens );
+    console.log( data );
+    
   });
   // var data = config.ipfs().catJsonSync( link );
   // console.log( JSON.stringify(data, false, 2) );
 
-} else if ( config.p || config.propose  ) {
+} else if ( config.propose  ) {
   
-  console.log('Propose ');
   var org = config.contracts.org();
+  var _orga = config['<name>'];
+  if( config['-s'] || config['-l'] ) {
+    var _data = config['<string>'];
+  } else {
+    var _path = config['<path>'];
+    var _data = JSON.parse(fs.readFileSync( _path, 'utf8' ));
+  }
+  var _candidate;
   
-  org.propose( config['<name>'], config['<path>'] ).then( tx => {
-    console.log(tx);
-  });
+  org.info.call( _orga ).then( a => {
+    var _langIpfs = a[3];
+    
+    if( a[3] == '0x46494e0000000000000000000000000000000000000000000000000000000000' ) {
+     return "QmfSnGmfexFsLDkbgN76Qhx2W8sxrNDobFEQZ6ER5qg2wW";
+    } else {
+      return org.getConsens( _langIpfs );
+    }
+  }).then( _langIpfs => {
+  
+    var schema = config.ipfs().catJsonSync( _langIpfs );
+    
+    var valid = tv4.validate( _data, schema );
+    if( !valid ) {
+      console.log( tv4.error.message );
+      throw Error(' Data is not valid in Language ', tv4.error.message );
+    }
+   
+    if( config['-l'] ) {
+      _candidate = _data;
+    } else {
+      _candidate = config.ipfs().addJsonSync( _data );
+    }
+    
+    return getCandidates( _orga );
 
+  }).then( candidates => {
+    
+    if( candidates.indexOf( _candidate ) > -1 ) throw Error('candidate already proposed');
+    
+    return org.propose( _orga, _candidate );
+  }).then( tx => {
+    // 2. check if candidate is valid language word
+    console.log(tx);
+  }).catch(e => {
+    console.log(e);
+  });
   
 } else if( config.candidates ) {
   
   console.log('list proposals');
   var org = config.contracts.org();
   
-  org.getCandidatesLength.call( config['<name>'] ).then( l => {
-    for(var i=0; i<l; i++ ) {
-      org.getCandidateAt( config['<name>'], i ).then( e => console.log(e) );
-    }
+  // TODO - unperformant
+  getCandidates( config['<name>'] ).then( candidates => {
+    console.log( candidates );
   });
-
-  
-  
 
 } else if( config.vote ) {
   
@@ -101,6 +140,7 @@ if( config.is ) {
   });
 
 } else if( config.new ) {
+  // TODO - test if lang is aviable
   
   var _orga   = config['<name>'];
   var _lang   = config['--lang'] || 'FIN';
@@ -150,4 +190,15 @@ if( config.is ) {
   })
   
 
+}
+
+function getCandidates( _orga ) {
+  return org.getCandidatesLength.call( _orga ).then( l => {
+      
+      var tasks = [];
+      for(var i=0; i<l; i++ ) {
+        tasks.push( org.getCandidateAt( _orga, i )) 
+      }
+      return Bluebird.all( tasks );
+    });
 }

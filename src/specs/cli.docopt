@@ -6,7 +6,7 @@ Usage:
   mem get        <name>
   mem send       <name> <address> <value>
   mem balanceOf  <name> <address> 
-  mem propose    <name> <path>
+  mem propose    <name> ( <path>| ( -s | -l ) <string> )
   mem candidates <name>
   mem vote       <name> <candidate> <vote>
   
