@@ -8,6 +8,7 @@ var CHAIN  = require( './src/lib/chain.es6' );
 var tv4    = require('tv4');
 var Bluebird = require('bluebird');
 var path   = require('path');
+var jsonlint = require('jsonlint');
 
 var cli = fs.readFileSync(__dirname + `/src/specs/cli.docopt`,'utf8');
 
@@ -26,19 +27,27 @@ var config = CONFIG( app, {
 
 if( config.is ) {
   
-  var link = config.contracts.spore().instance.getLink( app['<name>'] );
-  var schema = config.ipfs().catJsonSync( link );
   
-  var file = fs.readFileSync( app['<path>'], 'utf8' );
-  var json = JSON.parse( file );
+  var org = config.contracts.org();
+  var _orga = config['<name>'];
   
-  var valid = tv4.validate( json, schema );
+  org.getConsens.call( _orga ).then( schemaIpfs => {
+    
+    var schema = config.ipfs().catJsonSync( schemaIpfs );
+    
+    var file = fs.readFileSync( app['<path>'], 'utf8' );
+    var json = jsonlint.parse( file );
+    
+    var valid = tv4.validate( json, schema );
+    
+    if( !valid ) {
+      console.log( 'no :( '.red.bold, tv4.error.message );
+    } else {
+      console.log('indeed it is!'.green.bold);
+    }
+    
+  });
   
-  if( !valid ) {
-    console.log( 'no :( '.red.bold, tv4.error.message );
-  } else {
-    console.log('indeed it is!'.green.bold);
-  }
 
 } else if( config.chain ) {
   
@@ -186,6 +195,37 @@ if( config.is ) {
   })
   
 
+} else if( config.evolution && config.propose ) {
+  
+  var org = config.contracts.org();
+  
+  var _name = config['<name>'];
+  var _l_1 = config['<from>'];
+  var _l_2 = config['<to>'];
+  var _schema = config['<schema>'];
+  
+  org.newEvolutionSchema( _name, _l_1, _l_2, _schema ).then( tx => {
+    
+    console.log(tx);
+    
+  });
+  
+} else if( config.proposeEvolution ) {
+  var _orga = config['<name>'];
+  var _eN = config['<evolutionName>'];
+  
+  var org = config.contracts.org();
+  org.proposeEvolution( _orga, _eN ).then( tx => {
+    console.log(tx);
+  });
+
+} else if( config.evolve ) {
+  var _orga = conf['<name>'];
+  
+  org.evolve().then( tx => {
+    console.log(tx);
+  });
+  
 }
 
 function getCandidates( _orga ) {
