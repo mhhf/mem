@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string"},
+    "subtitle": { "type": "string"},
+    "background": { "type": "string"}
+  }
+}
