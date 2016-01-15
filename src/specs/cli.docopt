@@ -8,9 +8,11 @@ Usage:
   mem balanceOf  <name> <address> 
   mem propose    <name> ( <path>| ( -s | -l ) <string> )
   mem proposeEvolution    <name> <evolutionName>
+  mem voteEvolution <name> <evolutionName> <vote>
   mem candidates <name>
   mem vote       <name> <candidate> <vote>
   mem evolve     <name>
+  mem list
   
   mem evolution propose <name> <from> <to> <schema>
   

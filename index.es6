@@ -67,7 +67,7 @@ if( config.is ) {
   // var data = config.ipfs().catJsonSync( link );
   // console.log( JSON.stringify(data, false, 2) );
 
-} else if ( config.propose  ) {
+} else if ( !config.evolution && config.propose  ) {
   
   var org = config.contracts.org();
   var _orga = config['<name>'];
@@ -180,7 +180,8 @@ if( config.is ) {
     console.log('#Owners: ', a[0].toString());
     console.log('size: ', a[1].toString());
     console.log('#Candidates: ', a[2].toString());
-    console.log('language: ', a[3]);
+    console.log('#Evolutions: ', a[4].toString());
+    console.log('language: ', config.web3().toAscii( a[3] ));
   });
   
 } else if( config.balanceOf ) {
@@ -220,12 +221,31 @@ if( config.is ) {
   });
 
 } else if( config.evolve ) {
-  var _orga = conf['<name>'];
+  var _orga = config['<name>'];
   
+  var org = config.contracts.org();
   org.evolve().then( tx => {
     console.log(tx);
   });
   
+} else if( config.list ) {
+  var org = config.contracts.org();
+  
+  org.getAll().then( list => {
+    list.forEach( name => console.log( config.web3().toAscii( name ) ) );
+    // console.log( list );
+  })
+    
+} else if( config.voteEvolution ) {
+  // mem voteEvolution <name> <evolutionName> <vote>
+  var _orga = config['<name>'];
+  var _ev = config['<evolutionName>'];
+  var _vote = config['<vote>'];
+  
+  var org = config.contracts.org();
+  org.voteEvolution( _orga, _ev, _vote ).then( tx => {
+    console.log(tx);
+  } );
 }
 
 function getCandidates( _orga ) {

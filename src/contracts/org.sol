@@ -96,23 +96,32 @@ contract org {
     evolutionSchemasArray.length ++;
     evolutionSchemasArray[ evolutionSchemasArray.length - 1 ] = name;
     
+    // TODO test if _L_* are inhereted from SCHEMA/ are Languages
     evolutionSchemas[ name ].l_1 = _L_1;
     evolutionSchemas[ name ].l_2 = _L_2;
+    
+    // TODO test if _migration is inhereted from MIGRATION Language
     evolutionSchemas[ name ].migration = _migration;
     
     return true;
   }
   
-  function info( bytes32 _orga ) constant returns ( uint numOwners, uint size, uint numCandidates, bytes32 language ) {
+  function info( bytes32 _orga ) constant returns ( 
+                                                   uint numOwners,
+                                                   uint size,
+                                                   uint numCandidates, 
+                                                   bytes32 language,
+                                                   uint numEvolutions
+                                                  ) {
     var o = orgas[ _orga ];
     
     numOwners = o.owners.length;
     size = o.size;
     numCandidates = o.candidates.length;
     language = o.language;
+    numEvolutions = o.evolutionProposals.length;
     
   }
-  
   
   // propose Candidate
   function propose( bytes32 _orga, string _candidate ) {
@@ -210,6 +219,8 @@ contract org {
   // propose
   function proposeEvolution( bytes32 _orga, bytes32 _evolutionSchema ) returns ( bool ) {
     
+    // TODO - test if evolutionschema is actually a schema
+    
     if( evolutionSchemas[ _evolutionSchema ].l_1 != orgas[ _orga ].language ) {
       return false;
     }
@@ -226,8 +237,7 @@ contract org {
     orgas[ _orga ].evolutionVotes[_evolutionSchema][ msg.sender ] = vote;
     
   } 
-
-
+  
   // evolve
   // TODO - split in components
   function evolve( bytes32 _orga ) returns (bool) {
@@ -290,5 +300,8 @@ contract org {
     o.candidates[ o.candidates.length - 1 ] = consens;
     
   }
+  
+  
+  
   
 }

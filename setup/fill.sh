@@ -12,3 +12,6 @@ mem propose a -s "awesomecorp"
 mem propose a -s "omg systems"
 mem new landing_page
 mem propose landing_page ./landing_page.json 
+mem evolution propose nameToLandingPage short_simple_name landing_page nomigration
+mem proposeEvolution a nameToLandingPage
+mem voteEvolution a nameToLandingPage 10
