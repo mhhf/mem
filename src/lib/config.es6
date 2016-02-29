@@ -1,7 +1,8 @@
 var _               = require('lodash');
 var fs              = require('fs');
 var SPORE           = require('./spore.es6');
-var ORG             = require('../environments/development/contracts/org.sol.js');
+// var ORG_            = require('../build/js_module.js');
+var ORG             = require('../build/classes.json').org;
 var IPFS            = require('./ipfs.es6');
 var __package       = require('../../package.json');
 var colors          = require('colors');
@@ -108,7 +109,8 @@ module.exports = function ( config, options ){
     org: function() {
       Pudding.setWeb3( cfg.web3() );
       if( !instances.org ) {
-        var Org = ORG.load(Pudding);
+        var Org = Pudding.whisk( ORG.interface, ORG.bytecode );
+        // var Org = ORG.load(Pudding);
         instances.org = Org.at( Org.deployed_address );
       }
       return instances.org;

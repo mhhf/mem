@@ -1,0 +1,18 @@
+contract migration {
+  
+}
+
+
+contract Only_consens is migration {
+  
+  function only_consens () {
+    
+    
+    
+  }
+  
+  function getOne() returns (bool a) {
+    return true;
+  }
+
+}

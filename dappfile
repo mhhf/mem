@@ -1,0 +1,11 @@
+name: mypackage
+version: 0.0.1
+layout:
+  sol_sources: src/contracts/sol
+  build_dir: src/build
+environments:
+  undefined:
+    objects:
+      org:
+        class: Org
+        address: '0x07dd9fad6761cdd0f92d0e5786440d6797b3ab36'

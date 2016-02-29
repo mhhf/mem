@@ -1,0 +1,2 @@
+var org = new Org()
+export org

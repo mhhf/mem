@@ -3,7 +3,7 @@
 
 /// @title Simple ethereum package proposal v0.0.2
 /// @author Denis Erfurt 
-contract org {
+contract Org {
   
   struct orga {
     address[] owners;
@@ -61,7 +61,7 @@ contract org {
   // Package Name => Package Object
   mapping (bytes32 => orga) orgas;
   
-  function org () {
+  function Org () {
     
   }
   
@@ -136,7 +136,7 @@ contract org {
   // The consens is computed based on following equasions
   // $$ value(k) &:=& \sum_{a\in A} share(a) \cdot vote(a,k) $$ \\
   // $$ consens (O) &:=& min_<(\{ k |\ value(k) = \max_{k'\in K_G} (value(k')) \}) $$
-  function getConsens( bytes32 _orga ) constant returns( string _candidate ) {
+  function getConsens( bytes32 _orga ) constant returns( string ) {
     
     uint maxvote = 0;
     uint index = 0;
@@ -157,8 +157,9 @@ contract org {
       
     }
     
-    _candidate = orgas[ _orga ].candidates[ index ];
+    // _candidate = orgas[ _orga ].candidates[ index ];
     
+    return "omg";
   }
   
   // The consens is computed based on following equasions
