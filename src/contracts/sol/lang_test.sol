@@ -51,9 +51,9 @@ contract LangTester is Test {
   
   function testProposeNew() {
     Org org = new Org(lang1);
+    org.propose("aaaa","aaaa");
     org.propose("a","a");
     org.propose("aa","aa");
-    org.propose("aaaa","aaaa");
     byte[32] memory consens = org.getNewConsens();
     for(var i=0; i<32; i++){
       if(consens[i] == byte(0x00)) {

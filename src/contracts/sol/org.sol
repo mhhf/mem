@@ -124,6 +124,9 @@ contract Org is Test {
   function getNewConsens() returns( byte[32] consens ) {
     log_bytes("---");
     var (os, perf, cs, ci) = _computePerformance( start );
+    log_bytes("---");
+    log_bytes1(os._type);
+    log_uint(ci);
     return cs;
   }
   // function _getConsens(OptionSet storage os) internal returns(byte[32] consens ) {
@@ -149,6 +152,7 @@ contract Org is Test {
     if( os._type != byte(0xff) ) { // if the OptionSet has children
       // OptionSet storage bestChild;
       (bestChild, performance, cs, ci) = _getBestChild( os );
+      log_bytes1(bestChild._type);
       // compute performance on the basis of best child
       // log_uint(ci);
       _cs = cs;
@@ -178,10 +182,11 @@ contract Org is Test {
     uint index = 0;
     byte[32] memory _cs;
     uint _ci;
+    log_uint(0x11);
     for (var i =0; i<os.children.length; i++) {
       OptionSet c = os.optionFor[os.children[i]];
       (,,_cs, _ci) = _computePerformance (c);
-      if (c.maxPerformance > maxPerformance) {
+      if (c.maxPerformance > maxPerformance ||i == 0) {
         log_uint(11);
         index = i;
         maxPerformance = c.maxPerformance;
@@ -189,9 +194,14 @@ contract Org is Test {
         ci = _ci;
       }
     }
-    _cs[_ci] = os._type;
-    _ci++;
-    return (os.optionFor[os.children[index]], maxPerformance, _cs, _ci);
+    log_uint(0x12);
+    log_bytes1(os.children[index]);
+    log_bytes1(os.optionFor[os.children[index]]._type);
+    // (,,_cs, _ci) = _computePerformance (os.optionFor[os.children[0]]);
+    cs[ci] = os._type;
+    ci++;
+    log_named_uint('1',ci);
+    return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
   }
 
 }
