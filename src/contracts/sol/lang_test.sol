@@ -28,19 +28,33 @@ contract LangTester is Test {
     // org.linkTerminal(0x5f, <orga ref>) // reference all nonatomic terminals - consens of linked orgas has to be a language!!
   }
 
-  function testValidation() {
+  // function testValidation() {
+  //   Org org = new Org(lang1);
+  //   assertTrue(org.isValide("a"));
+  //   assertTrue(org.isValide("aaa"));
+  //   assertFalse(org.isValide("aab"));
+  //   assertFalse(org.isValide("b"));
+  // }
+  //
+  // function testPropose() {
+  //   Org org = new Org(lang1);
+  //   org.propose("aaa","aaa");
+  //   org.propose("aaaa","aaaa");
+  //   byte[32] memory consens = org.getConsens();
+  //   for(var i=0; i<32; i++){
+  //     if(consens[i] == byte(0x00)) {
+  //       break;
+  //     }
+  //     log_bytes1(consens[i]);
+  //   }
+  // }
+  
+  function testProposeNew() {
     Org org = new Org(lang1);
-    assertTrue(org.isValide("a"));
-    assertTrue(org.isValide("aaa"));
-    assertFalse(org.isValide("aab"));
-    assertFalse(org.isValide("b"));
-  }
-
-  function testPropose() {
-    Org org = new Org(lang1);
-    org.propose("aaa","aaa");
+    org.propose("a","a");
+    org.propose("aa","aa");
     org.propose("aaaa","aaaa");
-    byte[32] memory consens = org.getConsens();
+    byte[32] memory consens = org.getNewConsens();
     for(var i=0; i<32; i++){
       if(consens[i] == byte(0x00)) {
         break;

@@ -1,6 +1,7 @@
 import "dapple/debug.sol";
+import "dapple/test.sol";
 // TODO - do I need the ID?
-contract Org is Debug {
+contract Org is Test {
 
   // Atomic Terminals
   // 0x01 - bool
@@ -16,6 +17,7 @@ contract Org is Debug {
   //        saved in an global ownership table, but what if they change?
   struct OptionSet {
     byte _type;
+    uint _id;
 
     mapping (address => address[]) delegations;
     mapping (address => uint) votes;
@@ -53,6 +55,8 @@ contract Org is Debug {
     if( grammar.length % 3 != 0 )
       throw;
 
+    start._type = byte(0x01);
+
     // create start option set:
     // optionSetMapping[byte(0x01)].id = byte(0x01);
     for(var i=0; i < grammar.length; i+=3 ) {
@@ -64,6 +68,7 @@ contract Org is Debug {
     }
   }
 
+  uint idc = 0;
   function propose(bytes data, bytes proof) {
     // assert atoicity
     if( !isValide(proof) ) throw;
@@ -74,14 +79,21 @@ contract Org is Debug {
       // maybe with sha3
       // set 
       if (oS.optionFor[proof[i]]._type == byte(0x00)) {
-        oS.children.push(proof[i]);
+        oS.children.length++;
+        oS.children[oS.children.length -1] = proof[i];
+        // oS.children.push(proof[i]);
+        // log_uint(oS.children.length);
         oS.optionFor[proof[i]]._type = proof[i];
+        oS.optionFor[proof[i]]._id = idc++;
       }
       oS = oS.optionFor[proof[i]];
     }
     // mark last option as proof ending;
-    oS.children.push(byte(0xff));
+    oS.children.length++;
+    oS.children[ oS.children.length - 1 ] = byte(0xff);
+    // oS.children.push(byte(0xff));
     oS.optionFor[byte(0xff)]._type = byte(0xff);
+    oS.optionFor[byte(0xff)]._id = idc++;
   }
 
   // TODO rewrite validation - simplify
@@ -108,6 +120,12 @@ contract Org is Debug {
     }
     return consens;
   }
+
+  function getNewConsens() returns( byte[32] consens ) {
+    log_bytes("---");
+    var (os, perf, cs, ci) = _computePerformance( start );
+    return cs;
+  }
   // function _getConsens(OptionSet storage os) internal returns(byte[32] consens ) {
   //   // compute the best performing option in the opton set
   //   // each option
@@ -119,34 +137,61 @@ contract Org is Debug {
   //   }
   // }
 
-  function _computePerformance( OptionSet storage os ) internal returns(OptionSet storage bestChild, uint performance){
+  function _computePerformance( OptionSet storage os ) internal returns(
+    OptionSet storage bestChild,
+    uint performance,
+    byte[32] cs,
+    uint ci
+  ){
     performance = 0;
+    byte[32] memory _cs;
+    uint _ci = 0;
     if( os._type != byte(0xff) ) { // if the OptionSet has children
       // OptionSet storage bestChild;
-      (bestChild, performance) = _getBestChild( os );
+      (bestChild, performance, cs, ci) = _getBestChild( os );
       // compute performance on the basis of best child
+      // log_uint(ci);
+      _cs = cs;
+      _ci = ci;
     } else {
+      // log_uint(os._id);
       for (var i=0; i<owners.length; i++) {
         // TODO - watch for overflow
         performance += shares[owners[i]]*os.votes[owners[i]];
       }
+      bestChild = os;
     }
-    return (os, performance);
+    // log_bytes("111");
+    // log_uint(os._id);
+    // log_uint(bestChild._id);
+    return (bestChild, performance, _cs, _ci);
   }
 
   // given an option set, traverse all children and 
   // return best performing child
-  function _getBestChild( OptionSet storage os ) internal returns(OptionSet storage o, uint maxPerformance) {
+  function _getBestChild( OptionSet storage os ) internal returns(
+    OptionSet storage o,
+    uint maxPerformance,
+    byte[32] cs,
+    uint ci
+  ) {
     uint index = 0;
+    byte[32] memory _cs;
+    uint _ci;
     for (var i =0; i<os.children.length; i++) {
       OptionSet c = os.optionFor[os.children[i]];
-      _computePerformance (c);
+      (,,_cs, _ci) = _computePerformance (c);
       if (c.maxPerformance > maxPerformance) {
+        log_uint(11);
         index = i;
         maxPerformance = c.maxPerformance;
+        cs = _cs;
+        ci = _ci;
       }
     }
-    return (os.optionFor[os.children[index]], maxPerformance);
+    _cs[_ci] = os._type;
+    _ci++;
+    return (os.optionFor[os.children[index]], maxPerformance, _cs, _ci);
   }
 
 }
