@@ -30,7 +30,6 @@ contract LangTester is Test {
 
   function testValidation() {
     Org org = new Org(lang1);
-    assertTrue(org.isValide(""));
     assertTrue(org.isValide("a"));
     assertTrue(org.isValide("aaa"));
     assertFalse(org.isValide("aab"));

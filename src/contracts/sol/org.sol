@@ -14,28 +14,22 @@ contract Org is Debug {
   // TODO - a delegation set is List[ Address x Address ]
   //        an optimisation could be refering to addresses
   //        saved in an global ownership table, but what if they change?
-  struct Option {
-    OptionSet os;
-    byte _type; // Terminal
-    bytes data;
-    bool last;
-    mapping (address => uint) votes;
-    // unfortnutately this has to be computed in storage
-    // untill memory struct or mapping are possible
-    // or someone comes up with a better solution
-    mapping (address => uint) performance;
-    uint maxPerformance;
-  }
-
   struct OptionSet {
-    byte id;
+    byte _type;
+
     mapping (address => address[]) delegations;
-    mapping (byte => Option) o;
-    byte[] os;
+    mapping (address => uint) votes;
+
+    mapping (byte => OptionSet) optionFor;
+    byte[] children;
+    // todo refactor
+    OptionSet[] option;
+    bytes data;
+    uint maxPerformance;
     // unfortnutately this has to be computed in storage
     // untill memory struct or mapping are possible
     // or someone comes up with a better solution
-    // mapping (byte => mapping (address => uint)) performance;
+    mapping (byte => mapping (address => uint)) performance;
   }
 
   address[] owners;
@@ -76,18 +70,18 @@ contract Org is Debug {
 
     OptionSet oS = start;
     for (var i=0; i<proof.length; i++) {
-      // TODO - data in option map selection
+      // TODO - include data in option map selection
       // maybe with sha3
       // set 
-      if (oS.o[proof[i]]._type == byte(0x00)) {
-        oS.os.push(proof[i]);
+      if (oS.optionFor[proof[i]]._type == byte(0x00)) {
+        oS.children.push(proof[i]);
+        oS.optionFor[proof[i]]._type = proof[i];
       }
-      oS.o[proof[i]]._type = proof[i];
-      oS = oS.o[proof[i]].os;
+      oS = oS.optionFor[proof[i]];
     }
     // mark last option as proof ending;
-    oS.os.push(byte(0xff));
-    oS.o[byte(0xff)]._type = byte(0xff);
+    oS.children.push(byte(0xff));
+    oS.optionFor[byte(0xff)]._type = byte(0xff);
   }
 
   // TODO rewrite validation - simplify
@@ -104,17 +98,16 @@ contract Org is Debug {
   // Variable size data returning is not supported yet
   // http://solidity.readthedocs.org/en/latest/frequently-asked-questions.html#can-you-return-an-array-or-a-string-from-a-solidity-function-call
   // This should be reimplemented as soon as there is support
-  // function getConsens() returns( byte[32] consens ) {
-  //   OptionSet os = start;
-  //   uint index = 0;
-  //   while ( os.os.length != 0 ) {
-  //     consens[index] = os.o[os.os[0]]._type;
-  //     index++;
-  //     os = os.o[os.os[0]].os;
-  //   }
-  //   return consens;
-  // }
-  //
+  function getConsens() returns( byte[32] consens ) {
+    OptionSet os = start;
+    uint index = 0;
+    while ( os.children.length != 0 ) {
+      consens[index] = os.optionFor[os.children[0]]._type;
+      index++;
+      os = os.optionFor[os.children[0]];
+    }
+    return consens;
+  }
   // function _getConsens(OptionSet storage os) internal returns(byte[32] consens ) {
   //   // compute the best performing option in the opton set
   //   // each option
@@ -125,16 +118,35 @@ contract Org is Debug {
   //     }
   //   }
   // }
-  //
-  // function _computePerformance( Option o ) internal {
-  //   if( o._type != byte(0xff) ) {
-  //     Option memory bestChild = _getBestChild( o.os );
-  //     // compute performance on the basis of best child
-  //   }
-  // }
-  //
-  // function _getBestChild( OptionSet os ) internal returns(Option o){
-  //   
-  // }
+
+  function _computePerformance( OptionSet storage os ) internal returns(OptionSet storage bestChild, uint performance){
+    performance = 0;
+    if( os._type != byte(0xff) ) { // if the OptionSet has children
+      // OptionSet storage bestChild;
+      (bestChild, performance) = _getBestChild( os );
+      // compute performance on the basis of best child
+    } else {
+      for (var i=0; i<owners.length; i++) {
+        // TODO - watch for overflow
+        performance += shares[owners[i]]*os.votes[owners[i]];
+      }
+    }
+    return (os, performance);
+  }
+
+  // given an option set, traverse all children and 
+  // return best performing child
+  function _getBestChild( OptionSet storage os ) internal returns(OptionSet storage o, uint maxPerformance) {
+    uint index = 0;
+    for (var i =0; i<os.children.length; i++) {
+      OptionSet c = os.optionFor[os.children[i]];
+      _computePerformance (c);
+      if (c.maxPerformance > maxPerformance) {
+        index = i;
+        maxPerformance = c.maxPerformance;
+      }
+    }
+    return (os.optionFor[os.children[index]], maxPerformance);
+  }
 
 }
