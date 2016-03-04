@@ -6,17 +6,22 @@ contract LangTester is Test {
 
   Org org;
   function setUp() {
-    lang1 = new bytes(6); // language
+    lang1 = new bytes(9); // language
     lang1[0] = byte(0x01);
     lang1[1] = byte(0x61);
     lang1[2] = byte(0x01);
+
     lang1[3] = byte(0x01);
-    lang1[4] = byte(0xff);
-    lang1[5] = byte(0xff);
+    lang1[4] = byte(0x62);
+    lang1[5] = byte(0x01);
+
+    lang1[6] = byte(0x01);
+    lang1[7] = byte(0xff);
+    lang1[8] = byte(0xff);
     org = new Org(lang1);
     org.propose("aaaa","aaaa");
-    org.propose("a","a");
-    org.propose("aa","aa");
+    org.propose("ab","ab");
+    org.propose("b","b");
   }
 
   function testSetUp () {
@@ -49,11 +54,16 @@ contract LangTester is Test {
   //   //@log consens: `byte[32] consens`
   // }
 
-  function testProposeNew() logs_gas() {
-    byte[32] memory consens = org.getNewConsens();
-    //@log consens: `byte[32] consens`
-  }
+  // gas limit        3141592
+  // pre refactoring  : 95716
+  // post refactoring : 75551
+  // function testProposeNew() logs_gas() {
+  //   byte[32] memory consens = org.getNewConsens();
+  //   //@log consens: `byte[32] consens`
+  // }
 
   function testVote() {
+    org.vote("ab");
   }
+
 }

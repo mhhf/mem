@@ -134,6 +134,8 @@ contract Org is Test {
   //   }
   // }
 
+  // QUESTION - does this eaven make sence? suppose a really big scenario
+  // here one cannot compute everything in the gas limit
   function _computePerformance( OptionSet storage os ) internal returns(
     OptionSet storage bestChild,
     uint performance,
@@ -143,14 +145,24 @@ contract Org is Test {
     performance = 0;
     byte[32] memory _cs;
     uint _ci = 0;
-    if( os._type != byte(0xff) ) { // if the OptionSet has children
-      // OptionSet storage bestChild;
-      (bestChild, performance, cs, ci) = _getBestChild( os );
-      // compute performance on the basis of best child
-      _cs = cs;
-      _ci = ci;
+    uint i;
+    if( os._type != byte(0xff) ) { //if the OptionSet has children
+      uint maxPerformance;
+      // search for the child with the best performance
+      for (i =0; i<os.children.length; i++) {
+        OptionSet c = os.optionFor[os.children[i]];
+        (,,cs, ci) = _computePerformance (c);
+        if (c.maxPerformance > maxPerformance ||i == 0) {
+          bestChild = c;
+          maxPerformance = c.maxPerformance;
+          _cs = cs;
+          _ci = ci;
+        }
+      }
+      _cs[_ci] = os._type;
+      _ci++;
     } else {
-      for (var i=0; i<owners.length; i++) {
+      for (i=0; i<owners.length; i++) {
         // TODO - watch for overflow
         performance += shares[owners[i]]*os.votes[owners[i]];
       }
@@ -159,31 +171,33 @@ contract Org is Test {
     return (bestChild, performance, _cs, _ci);
   }
 
+
+  // DEPRECATED
   // given an option set, traverse all children and 
   // return best performing child
-  function _getBestChild( OptionSet storage os ) internal returns(
-    OptionSet storage o,
-    uint maxPerformance,
-    byte[32] cs,
-    uint ci
-  ) {
-    uint index = 0;
-    byte[32] memory _cs;
-    uint _ci;
-    for (var i =0; i<os.children.length; i++) {
-      OptionSet c = os.optionFor[os.children[i]];
-      (,,_cs, _ci) = _computePerformance (c);
-      if (c.maxPerformance > maxPerformance ||i == 0) {
-        index = i;
-        maxPerformance = c.maxPerformance;
-        cs = _cs;
-        ci = _ci;
-      }
-    }
-    // (,,_cs, _ci) = _computePerformance (os.optionFor[os.children[0]]);
-    cs[ci] = os._type;
-    ci++;
-    return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
-  }
+  // function _getBestChild( OptionSet storage os ) internal returns(
+  //   OptionSet storage o,
+  //   uint maxPerformance,
+  //   byte[32] cs,
+  //   uint ci
+  // ) {
+  //   uint index = 0;
+  //   byte[32] memory _cs;
+  //   uint _ci;
+  //   for (var i =0; i<os.children.length; i++) {
+  //     OptionSet c = os.optionFor[os.children[i]];
+  //     (,,_cs, _ci) = _computePerformance (c);
+  //     if (c.maxPerformance > maxPerformance ||i == 0) {
+  //       index = i;
+  //       maxPerformance = c.maxPerformance;
+  //       cs = _cs;
+  //       ci = _ci;
+  //     }
+  //   }
+  //   // (,,_cs, _ci) = _computePerformance (os.optionFor[os.children[0]]);
+  //   cs[ci] = os._type;
+  //   ci++;
+  //   return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
+  // }
 
 }
