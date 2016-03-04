@@ -4,6 +4,7 @@ import "org.sol";
 contract LangTester is Test {
   bytes lang1;
 
+  Org org;
   function setUp() {
     lang1 = new bytes(6); // language
     lang1[0] = byte(0x01);
@@ -12,6 +13,10 @@ contract LangTester is Test {
     lang1[3] = byte(0x01);
     lang1[4] = byte(0xff);
     lang1[5] = byte(0xff);
+    org = new Org(lang1);
+    org.propose("aaaa","aaaa");
+    org.propose("a","a");
+    org.propose("aa","aa");
   }
 
   function testSetUp () {
@@ -41,26 +46,12 @@ contract LangTester is Test {
   //   org.propose("aaa","aaa");
   //   org.propose("aaaa","aaaa");
   //   byte[32] memory consens = org.getConsens();
-  //   for(var i=0; i<32; i++){
-  //     if(consens[i] == byte(0x00)) {
-  //       break;
-  //     }
-  //     log_bytes1(consens[i]);
-  //   }
+  //   //@log consens: `byte[32] consens`
   // }
-  
-  function testProposeNew() {
-    Org org = new Org(lang1);
-    org.propose("aaaa","aaaa");
-    org.propose("a","a");
-    org.propose("aa","aa");
+
+  function testProposeNew() logs_gas() {
     byte[32] memory consens = org.getNewConsens();
-    for(var i=0; i<32; i++){
-      if(consens[i] == byte(0x00)) {
-        break;
-      }
-      log_bytes1(consens[i]);
-    }
+    //@log consens: `byte[32] consens`
   }
 
   function testVote() {

@@ -54,7 +54,6 @@ contract Org is Test {
     // grammar has to be in right linear form
     if( grammar.length % 3 != 0 )
       throw;
-
     start._type = byte(0x01);
 
     // create start option set:
@@ -77,12 +76,11 @@ contract Org is Test {
     for (var i=0; i<proof.length; i++) {
       // TODO - include data in option map selection
       // maybe with sha3
-      // set 
+      // set
       if (oS.optionFor[proof[i]]._type == byte(0x00)) {
         oS.children.length++;
         oS.children[oS.children.length -1] = proof[i];
         // oS.children.push(proof[i]);
-        // log_uint(oS.children.length);
         oS.optionFor[proof[i]]._type = proof[i];
         oS.optionFor[proof[i]]._id = idc++;
       }
@@ -122,11 +120,7 @@ contract Org is Test {
   }
 
   function getNewConsens() returns( byte[32] consens ) {
-    log_bytes("---");
     var (os, perf, cs, ci) = _computePerformance( start );
-    log_bytes("---");
-    log_bytes1(os._type);
-    log_uint(ci);
     return cs;
   }
   // function _getConsens(OptionSet storage os) internal returns(byte[32] consens ) {
@@ -145,29 +139,23 @@ contract Org is Test {
     uint performance,
     byte[32] cs,
     uint ci
-  ){
+  ) {
     performance = 0;
     byte[32] memory _cs;
     uint _ci = 0;
     if( os._type != byte(0xff) ) { // if the OptionSet has children
       // OptionSet storage bestChild;
       (bestChild, performance, cs, ci) = _getBestChild( os );
-      log_bytes1(bestChild._type);
       // compute performance on the basis of best child
-      // log_uint(ci);
       _cs = cs;
       _ci = ci;
     } else {
-      // log_uint(os._id);
       for (var i=0; i<owners.length; i++) {
         // TODO - watch for overflow
         performance += shares[owners[i]]*os.votes[owners[i]];
       }
       bestChild = os;
     }
-    // log_bytes("111");
-    // log_uint(os._id);
-    // log_uint(bestChild._id);
     return (bestChild, performance, _cs, _ci);
   }
 
@@ -182,25 +170,19 @@ contract Org is Test {
     uint index = 0;
     byte[32] memory _cs;
     uint _ci;
-    log_uint(0x11);
     for (var i =0; i<os.children.length; i++) {
       OptionSet c = os.optionFor[os.children[i]];
       (,,_cs, _ci) = _computePerformance (c);
       if (c.maxPerformance > maxPerformance ||i == 0) {
-        log_uint(11);
         index = i;
         maxPerformance = c.maxPerformance;
         cs = _cs;
         ci = _ci;
       }
     }
-    log_uint(0x12);
-    log_bytes1(os.children[index]);
-    log_bytes1(os.optionFor[os.children[index]]._type);
     // (,,_cs, _ci) = _computePerformance (os.optionFor[os.children[0]]);
     cs[ci] = os._type;
     ci++;
-    log_named_uint('1',ci);
     return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
   }
 
