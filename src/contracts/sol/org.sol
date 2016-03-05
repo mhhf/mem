@@ -15,7 +15,7 @@ contract Org is Test {
   // TODO - a delegation set is List[ Address x Address ]
   //        an optimisation could be refering to addresses
   //        saved in an global ownership table, but what if they change?
-  struct OptionSet {
+  struct Node {
     byte _type;
     bytes _id;
     bytes _parent;
@@ -25,7 +25,7 @@ contract Org is Test {
     mapping (address => address[]) delegations;
     mapping (address => uint) votes;
 
-    mapping (byte => OptionSet) optionFor;
+    mapping (byte => Node) optionFor;
     byte[] children;
     // todo refactor
     bytes data;
@@ -38,15 +38,15 @@ contract Org is Test {
   }
   bytes consens;
 
-  mapping (bytes => OptionSet) node;
+  mapping (bytes => Node) nodes;
 
   address[] owners;
   mapping (address => uint) shares;
 
   // N == 0x01 => Start rule
   // N == 0xff => Finish rule
-  mapping (byte => OptionSet) optionSetMapping;
-  OptionSet start;
+  mapping (byte => Node) optionSetMapping;
+  Node start;
 
   // Organisation Language
   mapping (byte => mapping (byte => byte)) R;
@@ -79,17 +79,20 @@ contract Org is Test {
     proof[_proof.length] = byte(0xff);
     //@log proposing candidate: `bytes proof`
 
-    OptionSet storage parent = node[""];
+    Node storage parent = nodes[""];
     for (var i=0; i<proof.length; i++) {
       bytes memory slice = __slice(proof,0,i+1);
       //@debug looking at `bytes slice`
-      OptionSet storage child = node[slice];
+      Node storage child = nodes[slice];
       if( child._id.length == 0 ) {
         //@debug not in trie
         child._id = slice;
         child._parent = parent._id;
         child._type = proof[i];
         parent._children.push (__slice(proof, 0, i));
+        if( parent._best_child == byte(0x00) ) {
+          parent._best_child = proof[i];
+        }
       }
       parent = child;
     }
@@ -110,22 +113,26 @@ contract Org is Test {
 
   function getConsens() returns(byte[32] _consens) {
     //@info getting consens
-    OptionSet os = node[""];
+    Node os = nodes[""];
     uint index = 0;
     while ( os._type != byte(0xff) && os._best_child != byte(0xff) ) {
       bytes memory link = __extend(os._id, 1);
       link[link.length - 1] = os._best_child;
       _consens[index++] = os._best_child;
-      os = node[link];
+      os = nodes[link];
     }
     return _consens;
   }
 
-  function getNewConsens() returns( byte[32] consens ) {
-    var (os, perf, cs, ci) = _computePerformance( start );
-    return cs;
+  function getCandidatePerformance(bytes candidate) returns(uint performance) {
+    Node os = nodes[""];
   }
-  // function _getConsens(OptionSet storage os) internal returns(byte[32] consens ) {
+
+  // function getNewConsens() returns( byte[32] consens ) {
+  //   var (os, perf, cs, ci) = _computePerformance( start );
+  //   return cs;
+  // }
+  // function _getConsens(Node storage os) internal returns(byte[32] consens ) {
   //   // compute the best performing option in the opton set
   //   // each option
   //   for ( var i=0; i<os.os.length; i++ ) {
@@ -145,7 +152,7 @@ contract Org is Test {
     // update the users votes
     // compute the performance
     // propagate performance to the root
-    OptionSet child = node[candidate];
+    Node child = nodes[candidate];
     bool increase = vote > child.votes[msg.sender];
     uint update;
     if( increase ) {
@@ -172,14 +179,14 @@ contract Org is Test {
       // 2.1.2 no  => stop
       // 2.2 child decreased => stop
 
-      OptionSet parent = node[child._parent];
+      Node parent = nodes[child._parent];
       if( parent._best_child == child._type ) { // child was top performer
         if( increase ) { // 1.1 child increased
           //  => update parent p.p += update
           parent.performance += update;
         } else { // 1.2 child decreased
           //   ? check if other child has become top
-          OptionSet storage best = _findBestPerformingChild(parent);
+          Node storage best = _findBestPerformingChild(parent);
           if( best._type == child._type ) { // 1.2.2 no
             // update parent p.p += update
             parent.performance -= update;
@@ -213,80 +220,57 @@ contract Org is Test {
 
   // QUESTION - does this eaven make sence? suppose a really big scenario
   // here one cannot compute everything in the gas limit
-  function _computePerformance( OptionSet storage os ) internal returns(
-    OptionSet storage bestChild,
-    uint performance,
-    byte[32] cs,
-    uint ci
-  ) {
-    performance = 0;
-    byte[32] memory _cs;
-    uint _ci = 0;
-    uint i;
-    if( os._type != byte(0xff) ) { //if the OptionSet has children
-      uint maxPerformance;
-      // search for the child with the best performance
-      for (i =0; i<os.children.length; i++) {
-        OptionSet c = os.optionFor[os.children[i]];
-        (,,cs, ci) = _computePerformance (c);
-        if (c.maxPerformance > maxPerformance ||i == 0) {
-          bestChild = c;
-          maxPerformance = c.maxPerformance;
-          _cs = cs;
-          _ci = ci;
-        }
-      }
-      _cs[_ci] = os._type;
-      _ci++;
-    } else {
-      for (i=0; i<owners.length; i++) {
-        // TODO - watch for overflow
-        performance += shares[owners[i]]*os.votes[owners[i]];
-      }
-      bestChild = os;
-    }
-    // EXPENSIVE - maybe export to something different?!
-    if( os.maxPerformance != performance ) {
-      os.maxPerformance = performance;
-    }
-    return (bestChild, performance, _cs, _ci);
-  }
-
-
-  // DEPRECATED
-  // given an option set, traverse all children and 
-  // return best performing child
-  // function _getBestChild( OptionSet storage os ) internal returns(
-  //   OptionSet storage o,
-  //   uint maxPerformance,
+  // function _computePerformance( Node storage os ) internal returns(
+  //   Node storage bestChild,
+  //   uint performance,
   //   byte[32] cs,
   //   uint ci
   // ) {
-  //   uint index = 0;
+  //   performance = 0;
   //   byte[32] memory _cs;
-  //   uint _ci;
-  //   for (var i =0; i<os.children.length; i++) {
-  //     OptionSet c = os.optionFor[os.children[i]];
-  //     (,,_cs, _ci) = _computePerformance (c);
-  //     if (c.maxPerformance > maxPerformance ||i == 0) {
-  //       index = i;
-  //       maxPerformance = c.maxPerformance;
-  //       cs = _cs;
-  //       ci = _ci;
+  //   uint _ci = 0;
+  //   uint i;
+  //   if( os._type != byte(0xff) ) { //if the Node has children
+  //     uint maxPerformance;
+  //     // search for the child with the best performance
+  //     for (i =0; i<os.children.length; i++) {
+  //       Node c = os.optionFor[os.children[i]];
+  //       (,,cs, ci) = _computePerformance (c);
+  //       if (c.maxPerformance > maxPerformance ||i == 0) {
+  //         bestChild = c;
+  //         maxPerformance = c.maxPerformance;
+  //         _cs = cs;
+  //         _ci = ci;
+  //       }
   //     }
+  //     _cs[_ci] = os._type;
+  //     _ci++;
+  //   } else {
+  //     for (i=0; i<owners.length; i++) {
+  //       // TODO - watch for overflow
+  //       performance += shares[owners[i]]*os.votes[owners[i]];
+  //     }
+  //     bestChild = os;
   //   }
-  //   // (,,_cs, _ci) = _computePerformance (os.optionFor[os.children[0]]);
-  //   cs[ci] = os._type;
-  //   ci++;
-  //   return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
+  //   // EXPENSIVE - maybe export to something different?!
+  //   if( os.maxPerformance != performance ) {
+  //     os.maxPerformance = performance;
+  //   }
+  //   return (bestChild, performance, _cs, _ci);
   // }
 
-  function _findBestPerformingChild( OptionSet _node ) internal returns(OptionSet storage best) {
+
+
+
+
+  // UTILS
+
+  function _findBestPerformingChild( Node _node ) internal returns(Node storage best) {
     uint performance= 0;
     for (var j=0; j<_node._children.length; j++) {
-      if(performance < node[_node._children[j]].performance) {
-        performance = node[_node._children[j]].performance;
-        best = node[_node._children[j]];
+      if(performance < nodes[_node._children[j]].performance) {
+        performance = nodes[_node._children[j]].performance;
+        best = nodes[_node._children[j]];
       }
     }
     return best;
