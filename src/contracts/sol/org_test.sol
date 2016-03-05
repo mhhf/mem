@@ -1,33 +1,16 @@
+import "lang_def.sol";
+import "cand_def.sol";
 import "dapple/test.sol";
 import "org.sol";
 
-contract LangTester is Test {
-  bytes lang1;
+contract OrgTester is Test, LangDefinitions, CandidateDefinitions {
 
   Org org;
   function setUp() {
-    lang1 = new bytes(9); // language
-    lang1[0] = byte(0x01);
-    lang1[1] = byte(0x61);
-    lang1[2] = byte(0x01);
-
-    lang1[3] = byte(0x01);
-    lang1[4] = byte(0x62);
-    lang1[5] = byte(0x01);
-
-    lang1[6] = byte(0x01);
-    lang1[7] = byte(0xff);
-    lang1[8] = byte(0xff);
-    org = new Org(lang1);
-    org.propose("aaaa","aaaa");
-    org.propose("ab","ab");
-    org.propose("b","b");
+    org = new Org(l_001);
   }
 
   function testSetUp () {
-
-    Org org = new Org(lang1);
-
     // terminals:
     // 0x01 - bool
     // 0x02 - uint
@@ -38,32 +21,30 @@ contract LangTester is Test {
     // org.linkTerminal(0x5f, <orga ref>) // reference all nonatomic terminals - consens of linked orgas has to be a language!!
   }
 
-  // function testValidation() {
+  // function testPropose() logs_gas() {
   //   Org org = new Org(lang1);
-  //   assertTrue(org.isValide("a"));
-  //   assertTrue(org.isValide("aaa"));
-  //   assertFalse(org.isValide("aab"));
-  //   assertFalse(org.isValide("b"));
-  // }
-  //
-  // function testPropose() {
-  //   Org org = new Org(lang1);
-  //   org.propose("aaa","aaa");
   //   org.propose("aaaa","aaaa");
-  //   byte[32] memory consens = org.getConsens();
-  //   //@log consens: `byte[32] consens`
-  // }
-
-  // gas limit        3141592
-  // pre refactoring  : 95716
-  // post refactoring : 75551
-  // function testProposeNew() logs_gas() {
-  //   byte[32] memory consens = org.getNewConsens();
-  //   //@log consens: `byte[32] consens`
+  //   // org.propose("aaaa","aaaa");
+  //   // byte[32] memory consens = org.getConsens();
+  //   // // @log consens: `byte[32] consens`
   // }
 
   function testVote() {
-    org.vote("ab");
+    bytes memory cand = new bytes(3);
+    cand[0] = byte(0x61);
+    cand[1] = byte(0x62);
+    cand[2] = byte(0xff);
+    bytes memory cand2 = new bytes(2);
+    cand2[0] = byte(0x62);
+    cand2[1] = byte(0xff);
+    org = new Org(l_001);
+    org.propose("aaaa","aaaa");
+    org.propose("ab","ab");
+    org.propose("b","b");
+    org.vote(cand, 200);
+    org.vote(cand2, 400);
+    byte[32] memory consens = org.getConsens();
+    //@log consens: `byte[32] consens`
   }
 
 }

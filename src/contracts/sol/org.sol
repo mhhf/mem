@@ -17,7 +17,10 @@ contract Org is Test {
   //        saved in an global ownership table, but what if they change?
   struct OptionSet {
     byte _type;
-    uint _id;
+    bytes _id;
+    bytes _parent;
+    bytes[] _children;
+    byte _best_child;
 
     mapping (address => address[]) delegations;
     mapping (address => uint) votes;
@@ -25,14 +28,17 @@ contract Org is Test {
     mapping (byte => OptionSet) optionFor;
     byte[] children;
     // todo refactor
-    OptionSet[] option;
     bytes data;
     uint maxPerformance;
+    uint performance;
     // unfortnutately this has to be computed in storage
     // untill memory struct or mapping are possible
     // or someone comes up with a better solution
-    mapping (byte => mapping (address => uint)) performance;
+    // mapping (byte => mapping (address => uint)) performance;
   }
+  bytes consens;
+
+  mapping (bytes => OptionSet) node;
 
   address[] owners;
   mapping (address => uint) shares;
@@ -50,48 +56,43 @@ contract Org is Test {
   // i%3=0 is current rule
   // i%3=1 is terminal
   // i%3=2 is next rule
-  function Org( bytes grammar ) {
+  function Org(bytes grammar) {
     // grammar has to be in right linear form
     if( grammar.length % 3 != 0 )
       throw;
     start._type = byte(0x01);
 
     // create start option set:
-    // optionSetMapping[byte(0x01)].id = byte(0x01);
     for(var i=0; i < grammar.length; i+=3 ) {
       if( grammar[i+1] == byte(0xff) ) { // end
         accepted[grammar[i]] = true;
-      } else {
-        R[grammar[i]][grammar[i+1]]=grammar[i+2];
       }
+      R[grammar[i]][grammar[i+1]]=grammar[i+2];
     }
   }
 
-  uint idc = 0;
-  function propose(bytes data, bytes proof) {
+  function propose(bytes data, bytes _proof) {
     // assert atoicity
-    if( !isValide(proof) ) throw;
+    if( !isValide(_proof) ) throw;
 
-    OptionSet oS = start;
+    bytes memory proof = __extend(_proof, 1);
+    proof[_proof.length] = byte(0xff);
+    //@log proposing candidate: `bytes proof`
+
+    OptionSet storage parent = node[""];
     for (var i=0; i<proof.length; i++) {
-      // TODO - include data in option map selection
-      // maybe with sha3
-      // set
-      if (oS.optionFor[proof[i]]._type == byte(0x00)) {
-        oS.children.length++;
-        oS.children[oS.children.length -1] = proof[i];
-        // oS.children.push(proof[i]);
-        oS.optionFor[proof[i]]._type = proof[i];
-        oS.optionFor[proof[i]]._id = idc++;
+      bytes memory slice = __slice(proof,0,i+1);
+      //@debug looking at `bytes slice`
+      OptionSet storage child = node[slice];
+      if( child._id.length == 0 ) {
+        //@debug not in trie
+        child._id = slice;
+        child._parent = parent._id;
+        child._type = proof[i];
+        parent._children.push (__slice(proof, 0, i));
       }
-      oS = oS.optionFor[proof[i]];
+      parent = child;
     }
-    // mark last option as proof ending;
-    oS.children.length++;
-    oS.children[ oS.children.length - 1 ] = byte(0xff);
-    // oS.children.push(byte(0xff));
-    oS.optionFor[byte(0xff)]._type = byte(0xff);
-    oS.optionFor[byte(0xff)]._id = idc++;
   }
 
   // TODO rewrite validation - simplify
@@ -99,24 +100,25 @@ contract Org is Test {
     byte rule = byte(0x01);
     for( var i=0; i<word.length; i++) {
       rule = R[rule][word[i]];
+      if( rule == byte(0xff) )
+        return true;
       if( rule == byte(0x00) && i<word.length-1 )
         return false;
     }
-    return ((rule >= byte(0xff))||(accepted[rule]));
+    return ((rule == byte(0xff))||(accepted[rule]));
   }
 
-  // Variable size data returning is not supported yet
-  // http://solidity.readthedocs.org/en/latest/frequently-asked-questions.html#can-you-return-an-array-or-a-string-from-a-solidity-function-call
-  // This should be reimplemented as soon as there is support
-  function getConsens() returns( byte[32] consens ) {
-    OptionSet os = start;
+  function getConsens() returns(byte[32] _consens) {
+    //@info getting consens
+    OptionSet os = node[""];
     uint index = 0;
-    while ( os.children.length != 0 ) {
-      consens[index] = os.optionFor[os.children[0]]._type;
-      index++;
-      os = os.optionFor[os.children[0]];
+    while ( os._type != byte(0xff) && os._best_child != byte(0xff) ) {
+      bytes memory link = __extend(os._id, 1);
+      link[link.length - 1] = os._best_child;
+      _consens[index++] = os._best_child;
+      os = node[link];
     }
-    return consens;
+    return _consens;
   }
 
   function getNewConsens() returns( byte[32] consens ) {
@@ -133,6 +135,81 @@ contract Org is Test {
   //     }
   //   }
   // }
+
+  function vote(bytes candidate, uint vote) returns(bool success) {
+    //@info --- VOTING
+    if( !isValide(candidate) ) throw;
+    if( vote > 1000 ) throw;
+
+    // Grab the option set
+    // update the users votes
+    // compute the performance
+    // propagate performance to the root
+    OptionSet child = node[candidate];
+    bool increase = vote > child.votes[msg.sender];
+    uint update;
+    if( increase ) {
+      update = vote - child.votes[msg.sender];
+    } else {
+      update = child.votes[msg.sender] - vote;
+    }
+    child.votes[msg.sender] = vote;
+    child.performance += update;
+    //@debug updating child `bytes child._id`: `uint update`
+
+    for(var i = 0; i < candidate.length; i++) {
+      // 1. child was top performer
+      // 1.1 child increased
+      //  => update parent p.p += update
+      // 1.2 child decreased
+      //   ? check if other child has become top (c'.p > )
+      // 1.2.1 yes => make other child to top
+      // 1.2.2 no  => update parent p.p += update
+      // 2. child was not top
+      // 2.1 child increased
+      //   ? check if child become top: c.p > p.p?
+      // 2.1.1 yes => inherit performance from parent p.p = c.p
+      // 2.1.2 no  => stop
+      // 2.2 child decreased => stop
+
+      OptionSet parent = node[child._parent];
+      if( parent._best_child == child._type ) { // child was top performer
+        if( increase ) { // 1.1 child increased
+          //  => update parent p.p += update
+          parent.performance += update;
+        } else { // 1.2 child decreased
+          //   ? check if other child has become top
+          OptionSet storage best = _findBestPerformingChild(parent);
+          if( best._type == child._type ) { // 1.2.2 no
+            // update parent p.p += update
+            parent.performance -= update;
+          } else { // 1.2.1 yes
+            // make other child to top
+            parent.performance = best.performance;
+            parent._best_child = best._type;
+          }
+        }
+      } else { // child was not top performer
+        if( increase ) { // 2.1 child increased
+          if( child.performance > parent.performance ) { // check if child become top: c.p > p.p?
+            // 2.1.1 yes => inherit from child p.p = c.p
+            parent.performance = child.performance;
+            parent._best_child = child._type;
+          } else { // 2.1.2 no  => stop
+            break;
+          }
+        } else { // 2.2 child decreased
+          // stop
+          break;
+        }
+      }
+      child = parent;
+      // TODO (1.1, 1.2.1, 1.2.2, 2.1.1) write tests
+    }
+    //@log stop at `bytes parent._id`, performance is `uint parent.performance`
+    // TODO save consens
+  }
+
 
   // QUESTION - does this eaven make sence? suppose a really big scenario
   // here one cannot compute everything in the gas limit
@@ -168,6 +245,10 @@ contract Org is Test {
       }
       bestChild = os;
     }
+    // EXPENSIVE - maybe export to something different?!
+    if( os.maxPerformance != performance ) {
+      os.maxPerformance = performance;
+    }
     return (bestChild, performance, _cs, _ci);
   }
 
@@ -199,5 +280,32 @@ contract Org is Test {
   //   ci++;
   //   return (os.optionFor[os.children[index]], maxPerformance, cs, ci);
   // }
+
+  function _findBestPerformingChild( OptionSet _node ) internal returns(OptionSet storage best) {
+    uint performance= 0;
+    for (var j=0; j<_node._children.length; j++) {
+      if(performance < node[_node._children[j]].performance) {
+        performance = node[_node._children[j]].performance;
+        best = node[_node._children[j]];
+      }
+    }
+    return best;
+  }
+
+  function __slice(bytes _in, uint from, uint to) internal returns(bytes out) {
+    out = new bytes(to-from);
+    for(var i=0; i< to-from; i++) {
+      out[i] = _in[from+i];
+    }
+    return out;
+  }
+
+  function __extend(bytes fst, uint extend) internal returns(bytes out) {
+    out = new bytes(fst.length + extend);
+    for(var i=0; i < fst.length; i++) {
+      out[i] = fst[i];
+    }
+    return out;
+  }
 
 }
