@@ -1,6 +1,12 @@
 import "dapple/debug.sol";
 import "dapple/test.sol";
-// TODO - do I need the ID?
+
+
+
+
+// THIS IS A PROOF  OF CONCEPT
+// CURRENTLY THERE ARE LIMITS ON:
+// OWNERSHIP SET: max 32 owners allowed
 contract Org is Test {
 
   // Atomic Terminals
@@ -20,10 +26,15 @@ contract Org is Test {
     bytes _id;
     bytes _parent;
     bytes[] _children;
-    byte _best_child;
+    uint _best_child; // index
 
-    mapping (address => address[]) delegations;
-    mapping (address => uint) votes;
+    // delegation is a set with d.length % 2 == 0
+    // i   = owner._id
+    // i+1 = vote ammount
+    uint[32] delegations;
+    // mapping (address => address[]) delegations;
+    // mapping (address => uint) votes;
+    uint[32] votes;
 
     mapping (byte => Node) optionFor;
     byte[] children;
@@ -40,13 +51,10 @@ contract Org is Test {
 
   mapping (bytes => Node) nodes;
 
-  address[] owners;
-  mapping (address => uint) shares;
-
-  // N == 0x01 => Start rule
-  // N == 0xff => Finish rule
-  mapping (byte => Node) optionSetMapping;
-  Node start;
+  mapping (uint => address) owners;
+  mapping (address => uint) ownerId;
+  uint numOwners;
+  mapping (uint => uint) shares;
 
   // Organisation Language
   mapping (byte => mapping (byte => byte)) R;
@@ -60,7 +68,12 @@ contract Org is Test {
     // grammar has to be in right linear form
     if( grammar.length % 3 != 0 )
       throw;
-    start._type = byte(0x01);
+
+    // INITIALIZE orga with 10000 shares
+    numOwners = 1;
+    owners[1] = msg.sender;
+    ownerId[msg.sender] = 1;
+    shares[1] = 10000;
 
     // create start option set:
     for(var i=0; i < grammar.length; i+=3 ) {
@@ -89,13 +102,11 @@ contract Org is Test {
         child._id = slice;
         child._parent = parent._id;
         child._type = proof[i];
-        parent._children.push (__slice(proof, 0, i));
-        if( parent._best_child == byte(0x00) ) {
-          parent._best_child = proof[i];
-        }
+        parent._children.push (slice);
       }
       parent = child;
     }
+    parent = nodes[""];
   }
 
   // TODO rewrite validation - simplify
@@ -113,19 +124,49 @@ contract Org is Test {
 
   function getConsens() returns(byte[32] _consens) {
     //@info getting consens
-    Node os = nodes[""];
+    Node storage node = nodes[""];
+    //@log #children: `uint node._children.length` `bytes node._children[0]`
     uint index = 0;
-    while ( os._type != byte(0xff) && os._best_child != byte(0xff) ) {
-      bytes memory link = __extend(os._id, 1);
-      link[link.length - 1] = os._best_child;
-      _consens[index++] = os._best_child;
-      os = nodes[link];
+    while ( node._type != byte(0xff) && node._children.length != 0 && index < 32) {
+      node = nodes[node._children[node._best_child]];
+      _consens[index++] = node._type;
     }
     return _consens;
   }
 
+  // TODO - the delegation property is not transitive - make this transitive
   function getCandidatePerformance(bytes candidate) returns(uint performance) {
-    Node os = nodes[""];
+    // TODO - check if candidate is in Trie
+
+    var (delegations, votes) = _inheritBasis (candidate);
+    // Node best = _getBestChild(nodes[candidate]);
+    return _getBestChildPerformance( delegations, votes, nodes[candidate] );
+
+    //
+    // // BUILD DELIGATION SET
+    // Node node = nodes[""];
+    // uint[32] memory delegations;
+    // uint[32] memory votes;
+    // uint i;
+    // for (i=0; i<candidate.length; i++) { // from root to candidate
+    //   node = nodes[__slice(candidate,0,i+1)];
+    //   for (var j=1; j<=numOwners; j++) { // inherit deligations
+    //     if( node.delegations[j] > 0 ) { // if delegations is set
+    //       delegations[j] = node.delegations[j]; // take
+    //     }
+    //     if( node.votes[j] > 0 ) {
+    //       votes[j] = node.votes[j];
+    //     }
+    //   }
+    // }
+    // // TODO - compute transitive hull of delegations
+    // for (i=1; i<=numOwners; i++) {
+    //   if (votes[i] > 0) { // has voted
+    //     performance += votes[i] * shares[i];
+    //   } else if(delegations[i] > 0) { // delegate has voted
+    //     performance += votes[delegations[i]] * shares[i];
+    //   }
+    // }
   }
 
   // function getNewConsens() returns( byte[32] consens ) {
@@ -143,79 +184,142 @@ contract Org is Test {
   //   }
   // }
 
+  // TODO - to fucking expensive - play with ways to optimize this
   function vote(bytes candidate, uint vote) returns(bool success) {
-    //@info --- VOTING
     if( !isValide(candidate) ) throw;
     if( vote > 1000 ) throw;
+    //@info owner `uint ownerId[msg.sender]` voted `uint vote` for `bytes candidate`
+    Node node = nodes[candidate];
+    node.votes[ownerId[msg.sender]] = vote;
+    Node storage parent = nodes[node._parent];
+    uint[32] memory delegations;
+    uint[32] memory votes;
+    uint performance;
+    uint i;
 
-    // Grab the option set
-    // update the users votes
-    // compute the performance
-    // propagate performance to the root
-    Node child = nodes[candidate];
-    bool increase = vote > child.votes[msg.sender];
-    uint update;
-    if( increase ) {
-      update = vote - child.votes[msg.sender];
-    } else {
-      update = child.votes[msg.sender] - vote;
-    }
-    child.votes[msg.sender] = vote;
-    child.performance += update;
-    //@debug updating child `bytes child._id`: `uint update`
-
-    for(var i = 0; i < candidate.length; i++) {
-      // 1. child was top performer
-      // 1.1 child increased
-      //  => update parent p.p += update
-      // 1.2 child decreased
-      //   ? check if other child has become top (c'.p > )
-      // 1.2.1 yes => make other child to top
-      // 1.2.2 no  => update parent p.p += update
-      // 2. child was not top
-      // 2.1 child increased
-      //   ? check if child become top: c.p > p.p?
-      // 2.1.1 yes => inherit performance from parent p.p = c.p
-      // 2.1.2 no  => stop
-      // 2.2 child decreased => stop
-
-      Node parent = nodes[child._parent];
-      if( parent._best_child == child._type ) { // child was top performer
-        if( increase ) { // 1.1 child increased
-          //  => update parent p.p += update
-          parent.performance += update;
-        } else { // 1.2 child decreased
-          //   ? check if other child has become top
-          Node storage best = _findBestPerformingChild(parent);
-          if( best._type == child._type ) { // 1.2.2 no
-            // update parent p.p += update
-            parent.performance -= update;
-          } else { // 1.2.1 yes
-            // make other child to top
-            parent.performance = best.performance;
-            parent._best_child = best._type;
+    while ( node._id.length > 0) {
+      (delegations, votes) = _inheritBasis(node._id);
+      performance = _getBestChildPerformance (delegations, votes, node);
+      //@log performance of node `bytes node._id` is `uint performance`
+      // if node is best child
+      if( nodes[parent._children[parent._best_child]]._type == node._type ) {
+        //@log node is best child
+        uint bestIndex = parent._best_child;
+        // check if still best child
+        for(i=0; i<parent._children.length; i++) {
+          if(i==parent._best_child) { continue; }
+          if(performance < _getBestChildPerformance(delegations, votes, nodes[parent._children[i]])) {
+            bestIndex = i;
           }
         }
-      } else { // child was not top performer
-        if( increase ) { // 2.1 child increased
-          if( child.performance > parent.performance ) { // check if child become top: c.p > p.p?
-            // 2.1.1 yes => inherit from child p.p = c.p
-            parent.performance = child.performance;
-            parent._best_child = child._type;
-          } else { // 2.1.2 no  => stop
-            break;
+        if(bestIndex == parent._best_child) { // 1.1 still best
+          //@log still best child
+          // => propagate
+        } else { // 1.2 not best
+          //@log no more best child
+          parent._best_child = bestIndex;
+          // switch best and propagate with new
+        }
+      } else { // node is not best child
+        //@log node is not best child
+        // get best child performance
+        uint performance_ = getCandidatePerformance(_getBestChild(parent)._id);
+        //@log performance of previous best child was `uint performance_`
+        // compare to nodes performance
+        if( performance > performance_ ) {
+          //@log node got new best child
+          // swptch parents best child to node
+          for(i=0; i<parent._children.length; i++) {
+            if(nodes[parent._children[i]]._type == node._type) {
+              //@log best child index is now `uint i`
+              parent._best_child = i;
+              break;
+            }
           }
-        } else { // 2.2 child decreased
-          // stop
+          // propagate
+        } else {
           break;
         }
       }
-      child = parent;
-      // TODO (1.1, 1.2.1, 1.2.2, 2.1.1) write tests
+      node = parent;
+      parent = nodes[node._parent];
     }
-    //@log stop at `bytes parent._id`, performance is `uint parent.performance`
-    // TODO save consens
   }
+
+
+  // function vote(bytes candidate, uint vote) returns(bool success) {
+  //   //@info --- VOTING
+  //   if( !isValide(candidate) ) throw;
+  //   if( vote > 1000 ) throw;
+  //
+  //   // Grab the option set
+  //   // update the users votes
+  //   // compute the performance
+  //   // propagate performance to the root
+  //   Node child = nodes[candidate];
+  //   bool increase = vote > child.votes[ownerId[msg.sender]];
+  //   uint update;
+  //   if( increase ) {
+  //     update = vote - child.votes[ownerId[msg.sender]];
+  //   } else {
+  //     update = child.votes[ownerId[msg.sender]] - vote;
+  //   }
+  //   child.votes[ownerId[msg.sender]] = vote;
+  //   child.performance += update;
+  //   //@debug updating child `bytes child._id`: `uint update`
+  //
+  //   for(var i = 0; i < candidate.length; i++) {
+  //     // 1. child was top performer
+  //     // 1.1 child increased
+  //     //  => update parent p.p += update
+  //     // 1.2 child decreased
+  //     //   ? check if other child has become top (c'.p > )
+  //     // 1.2.1 yes => make other child to top
+  //     // 1.2.2 no  => update parent p.p += update
+  //     // 2. child was not top
+  //     // 2.1 child increased
+  //     //   ? check if child become top: c.p > p.p?
+  //     // 2.1.1 yes => inherit performance from parent p.p = c.p
+  //     // 2.1.2 no  => stop
+  //     // 2.2 child decreased => stop
+  //
+  //     Node parent = nodes[child._parent];
+  //     if( parent._best_child == child._type ) { // child was top performer
+  //       if( increase ) { // 1.1 child increased
+  //         //  => update parent p.p += update
+  //         parent.performance += update;
+  //       } else { // 1.2 child decreased
+  //         //   ? check if other child has become top
+  //         Node storage best = _findBestPerformingChild(parent);
+  //         if( best._type == child._type ) { // 1.2.2 no
+  //           // update parent p.p += update
+  //           parent.performance -= update;
+  //         } else { // 1.2.1 yes
+  //           // make other child to top
+  //           parent.performance = best.performance;
+  //           parent._best_child = best._type;
+  //         }
+  //       }
+  //     } else { // child was not top performer
+  //       if( increase ) { // 2.1 child increased
+  //         if( child.performance > parent.performance ) { // check if child become top: c.p > p.p?
+  //           // 2.1.1 yes => inherit from child p.p = c.p
+  //           parent.performance = child.performance;
+  //           parent._best_child = child._type;
+  //         } else { // 2.1.2 no  => stop
+  //           break;
+  //         }
+  //       } else { // 2.2 child decreased
+  //         // stop
+  //         break;
+  //       }
+  //     }
+  //     child = parent;
+  //     // TODO (1.1, 1.2.1, 1.2.2, 2.1.1) write tests
+  //   }
+  //   //@log stop at `bytes parent._id`, performance is `uint parent.performance`
+  //   // TODO save consens
+  // }
 
 
   // QUESTION - does this eaven make sence? suppose a really big scenario
@@ -261,21 +365,71 @@ contract Org is Test {
 
 
 
+  // ORG UTILS
+  function _getBestChild( Node storage node ) internal returns(Node storage best) {
+    uint performance = 0;
+    while ( node._type != byte(0xff) && node._children.length != 0 ) {
+      node = nodes[node._children[node._best_child]];
+    }
+    return node;
+  }
+
+  // TODO - maybe here only the memory pointer is passed
+  function _getBestChildPerformance ( uint[32] memory delegations,
+                                      uint[32] memory votes, Node node)
+                                      internal returns(uint performance) {
+    uint i;
+    while (node._type != byte(0xff) && node._children.length != 0) {
+      node = nodes[node._children[node._best_child]];
+      for (var j=1; j<=numOwners; j++) { // inherit deligations
+        if( node.delegations[j] > 0 ) { // if delegations is set
+          delegations[j] = node.delegations[j]; // take
+        }
+        if( node.votes[j] > 0 ) {
+          votes[j] = node.votes[j];
+        }
+      }
+    }
+    // TODO - compute transitive hull of delegations
+    for (i=1; i<=numOwners; i++) {
+      if (votes[i] > 0) { // has voted
+        performance += votes[i] * shares[i];
+      } else if(delegations[i] > 0) { // delegate has voted
+        performance += votes[delegations[i]] * shares[i];
+      }
+    }
+    return performance;
+  }
+
+  function _inheritBasis (bytes candidate) internal returns (uint[32] delegations, uint[32] votes) {
+    Node node = nodes[""];
+    for (var i=0; i<candidate.length; i++) { // from root to candidate
+      node = nodes[__slice(candidate,0,i+1)];
+      for (var j=1; j<=numOwners; j++) { // inherit deligations
+        if( node.delegations[j] > 0 ) { // if delegations is set
+          delegations[j] = node.delegations[j]; // take
+        }
+        if( node.votes[j] > 0 ) {
+          votes[j] = node.votes[j];
+        }
+      }
+    }
+    return (delegations, votes);
+  }
+
+  // function _findBestPerformingChild( Node _node ) internal returns(Node storage best) {
+  //   uint performance= 0;
+  //   for (var j=0; j<_node._children.length; j++) {
+  //     if(performance < nodes[_node._children[j]].performance) {
+  //       performance = nodes[_node._children[j]].performance;
+  //       best = nodes[_node._children[j]];
+  //     }
+  //   }
+  //   return best;
+  // }
 
 
   // UTILS
-
-  function _findBestPerformingChild( Node _node ) internal returns(Node storage best) {
-    uint performance= 0;
-    for (var j=0; j<_node._children.length; j++) {
-      if(performance < nodes[_node._children[j]].performance) {
-        performance = nodes[_node._children[j]].performance;
-        best = nodes[_node._children[j]];
-      }
-    }
-    return best;
-  }
-
   function __slice(bytes _in, uint from, uint to) internal returns(bytes out) {
     out = new bytes(to-from);
     for(var i=0; i< to-from; i++) {

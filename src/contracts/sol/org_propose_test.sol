@@ -5,12 +5,13 @@ import "org.sol";
 
 contract OrgProposeTester is Test, LangDefinitions, CandidateDefinitions {
 
-  Org org;
+  // Org org;
   function setUp() {
-    org = new Org(l_001);
+    // org = new Org(l_001);
   }
 
   function testSimplePropose() {
+    Org org = new Org(l_001);
     org.propose("aaaa","aaaa");
     org.propose("ab","ab");
     org.propose("b","b");

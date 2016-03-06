@@ -8,6 +8,9 @@ contract OrgTester is Test, LangDefinitions, CandidateDefinitions {
   Org org;
   function setUp() {
     org = new Org(l_001);
+    org.propose("aaaa","aaaa");
+    org.propose("ab","ab");
+    // org.vote(c_abf, 200);
   }
 
   function testSetUp () {
@@ -21,15 +24,21 @@ contract OrgTester is Test, LangDefinitions, CandidateDefinitions {
     // org.linkTerminal(0x5f, <orga ref>) // reference all nonatomic terminals - consens of linked orgas has to be a language!!
   }
 
-  function testVote() {
-    org = new Org(l_001);
-    org.propose("aaaa","aaaa");
-    org.propose("ab","ab");
+  function testVote() logs_gas {
+    // org = new Org(l_001);
+    // org.propose("aaaa","aaaa");
+    // org.propose("ab","ab");
     // org.propose("b","b");
-    // org.vote(c_abf, 200);
+    org.vote(c_abf, 200);
     // org.vote(c_bf, 400);
-    byte[32] memory consens = org.getConsens();
-    //@log consens: `byte[32] consens`
+    // byte[32] memory consens = org.getConsens();
+    ////@log consens: `byte[32] consens`
+  }
+
+  function testCandidatePerformance() logs_gas {
+    // org = new Org(l_001);
+    uint performance = org.getCandidatePerformance(c_abf);
+    //@log performance for candidate abf is `uint performance`
   }
 
 }
