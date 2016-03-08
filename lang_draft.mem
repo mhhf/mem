@@ -1,0 +1,28 @@
+start LandingPage
+
+def LandingPage:
+  Header Features
+
+// This demonstrates alternatives
+def Header:
+  Title
+  Title Subtitle
+  Title Subtitle Summery
+
+// must have at least one feature
+// this shows the kleene operator
+def Features:
+  Feature Features
+  Feature
+
+def Feature:
+  String
+
+def Title:
+  String
+
+def Subtitle:
+  String
+
+def Summery:
+  String

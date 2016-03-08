@@ -39,6 +39,7 @@
     "jison": "^0.4.17",
     "jsondiffpatch": "^0.1.37",
     "jsonlint": "^1.6.2",
+    "lex": "^1.7.9",
     "lodash": "^3.10.1",
     "readline-sync": "^1.2.21",
     "shelljs": "^0.5.3",

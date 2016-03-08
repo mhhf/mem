@@ -246,6 +246,9 @@ if( config.is ) {
   org.voteEvolution( _orga, _ev, _vote ).then( tx => {
     console.log(tx);
   } );
+} else if (config.compile) {
+  var _path = config['<path>'];
+  require('./src/lib/lang.es6')(_path);
 }
 
 function getCandidates( _orga ) {
