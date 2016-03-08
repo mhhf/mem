@@ -9,35 +9,34 @@ contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions, CandidateDe
   Org org;
   function setUp() {
     org = new Org(l_001);
-    org.propose("aba","aba");
-    org.propose("abb","abb");
-    org.propose("aab","aab");
-    org.propose("aaaa","aaaa");
+    org.propose("1101","aaaa");
+    org.propose("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
     setupReporter('doc/report.md');
   }
 
   function testCorrectlyInitiateFirstConsensCandidate() {
-    assertTrue(__consensEq(org.getConsens(), c_abaf));
+    assertTrue(__consensEq(org.getConsens(), c_1101));
   }
 
   function testCorrectlySwitchesToNewTestCandidate() {
-    org.vote(c_abbf, 100);
-    // assertTrue(__consensEq(org.getConsens(), c_abbf));
+    org.vote(c_0a, 100);
+    assertTrue(__consensEq(org.getConsens(), c_0a));
   }
 
   function testCorrectlyVotesForMiddleCandidate() {
-    org.vote("aa", 200);
-    assertTrue(__consensEq(org.getConsens(), c_aabf));
+    org.vote(c_1, 200);
+    assertTrue(__consensEq(org.getConsens(), c_1101));
   }
 
   function testCorrectlyPropagatesVotesDownTheTree() logs_gas {
-    org.vote("aab", 10);
-    org.vote("aa", 200);
-    byte[32] memory consens = org.getConsens();
-    assertTrue(__consensEq(org.getConsens(), c_aaaaf));
+    org.vote(c_1a, 10);
+    org.vote(c_1, 200);
+    assertTrue(__consensEq(org.getConsens(), c_1101));
   }
 
-  function __consensEq(byte[32] a, bytes bs) internal returns(bool success){
+  function __consensEq(bytes32 a, bytes32 bs) internal returns(bool success){
     success = true;
     for (var i=0; i<32; i++) {
       // halt if end of consens candidate is reached

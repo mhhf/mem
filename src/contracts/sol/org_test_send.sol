@@ -11,10 +11,9 @@ contract OrgOwnerTester is Test, Reporter, LangDefinitions, CandidateDefinitions
   Org org;
   function setUp() {
     org = new Org(l_001);
-    org.propose("abb","abb");
-    org.propose("aba","aba");
-    org.propose("aaaa","aaaa");
-    org.propose("aab","aab");
+    org.propose("1101","aaaa");
+    org.propose("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
     setupReporter('doc/report.md');
     T1 = new Tester(); t1 = address(T1);
     T2 = new Tester(); t2 = address(T2);

@@ -27,12 +27,12 @@ contract LangTester is Test, LangDefinitions, CandidateDefinitions {
     assertTrue(org2.isValide("aaabb"));
   }
 
-  function testCandidatesWithEndMark() {
-    Org org = new Org(l_001);
-    assertTrue(org.isValide(c_aff));
-    assertTrue(org.isValide(c_bf));
-    assertFalse(org.isValide(c_cf));
-  }
+  // function testCandidatesWithEndMark() {
+  //   Org org = new Org(l_001);
+  //   assertTrue(org.isValide(c_aff));
+  //   assertTrue(org.isValide(c_bf));
+  //   assertFalse(org.isValide(c_cf));
+  // }
 
   // test start rule is not final
   function testStartRuleIsNotFinal() {

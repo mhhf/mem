@@ -9,7 +9,7 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
   Org org;
   function setUp() {
     org = new Org(l_001);
-    org.propose("abb","abb");
+    org.propose("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","abb");
     org.propose("aba","aba");
     org.propose("aaaa","aaaa");
     org.propose("aab","aab");
@@ -26,32 +26,32 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
     //@doc Tree:
   }
 
-  bytes candidate;
+  bytes32 candidate;
   function testLog() wrapCode('dot') {
     candidate = "";
     //@doc digraph A {
-    __recLog();
+    // __recLog();
     //@doc }
   }
 
-  function __recLog() internal {
-    uint numChildren = org.getNumChildrenFor(candidate);
-    bytes memory cand = candidate;
-    uint length = candidate.length++;
-    uint bestChild = org.getBestChildIndex(candidate);
-    for(var i=0; i<numChildren; i++) {
-      byte _type = org.getChildTypeAt(cand, i);
-      candidate[length] = _type;
-      if(i==bestChild) {
-        //@doc "`bytes cand`" -> "`bytes candidate`";
-      } else {
-        //@doc "`bytes cand`" -> "`bytes candidate`" [style=dotted];
-      }
-      //@doc "`bytes candidate`" [label="`byte _type`"];
-      __recLog();
-    }
-    candidate.length--;
-  }
+  // function __recLog() internal {
+  //   uint numChildren = org.getNumChildrenFor(candidate);
+  //   bytes memory cand = candidate;
+  //   uint length = candidate.length++;
+  //   uint bestChild = org.getBestChildIndex(candidate);
+  //   for(var i=0; i<numChildren; i++) {
+  //     byte _type = org.getChildTypeAt(cand, i);
+  //     candidate[length] = _type;
+  //     if(i==bestChild) {
+  //       //@doc "`bytes cand`" -> "`bytes candidate`";
+  //     } else {
+  //       //@doc "`bytes cand`" -> "`bytes candidate`" [style=dotted];
+  //     }
+  //     //@doc "`bytes candidate`" [label="`byte _type`"];
+  //     __recLog();
+  //   }
+  //   candidate.length--;
+  // }
 
   function testVote () logs_gas {
     // org = new Org(l_001);

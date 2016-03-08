@@ -10,9 +10,9 @@ import "dapple/test.sol";
 contract Org is Test {
 
   // Atomic Terminals
-  // 0x01 - bool
-  // 0x02 - uint256
-  // 0x03 - string256
+  // 0x61 - bool
+  // 0x62 - string256
+  // 0x63 - uint256
 
   // Nonatomic Terminals
   // Has to be explicitly linked
@@ -23,11 +23,12 @@ contract Org is Test {
   //        saved in an global ownership table, but what if they change?
   struct Node {
     byte _type;
-    bytes _id;
-    bytes _parent;
-    bytes[] _children;
+    bytes32 _id;
+    bytes32 _parent;
+    bytes32[] _children;
     uint8 _best_child; // index
 
+    bytes data;
     // delegation is a set with d.length % 2 == 0
     // i   = owner._id
     // i+1 = vote ammount
@@ -35,21 +36,11 @@ contract Org is Test {
     // mapping (address => address[]) delegations;
     // mapping (address => uint) votes;
     uint[32] votes;
-
-    mapping (byte => Node) optionFor;
-    byte[] children;
-    // todo refactor
-    bytes data;
-    uint maxPerformance;
-    uint performance;
-    // unfortnutately this has to be computed in storage
-    // untill memory struct or mapping are possible
-    // or someone comes up with a better solution
-    // mapping (byte => mapping (address => uint)) performance;
   }
   bytes consens;
 
-  mapping (bytes => Node) nodes;
+  mapping (byte => uint8) atomBytes;
+  mapping (bytes32 => Node) nodes;
 
   mapping (uint8 => address) owners;
   mapping (address => uint8) ownerId;
@@ -82,6 +73,11 @@ contract Org is Test {
       }
       R[grammar[i]][grammar[i+1]]=grammar[i+2];
     }
+
+    atomBytes[byte(0x61)] = 1; // bool
+    atomBytes[byte(0x62)] = 32; // bytes256
+    atomBytes[byte(0x63)] = 32; // uint256
+    atomBytes[byte(0xff)] = 0; // bottom ($)
   }
 
   function send(address to, uint value) {
@@ -96,6 +92,7 @@ contract Org is Test {
     }
   }
 
+  // TODO - test if data has valide length
   function propose(bytes data, bytes _proof) {
     // assert atoicity
     if( !isValide(_proof) ) throw;
@@ -103,22 +100,26 @@ contract Org is Test {
     bytes memory proof = __extend(_proof, 1);
     proof[_proof.length] = byte(0xff);
     //@log proposing candidate: `bytes proof`
-
+    uint8 dataIndex = 0;
     Node storage parent = nodes[""];
     for (var i=0; i<proof.length; i++) {
-      bytes memory slice = __slice(proof,0,i+1);
-      //@debug looking at `bytes slice`
-      Node storage child = nodes[slice];
-      if( child._id.length == 0 ) {
+      bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
+      bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
+      bytes memory proofSlice = __slice(proof,0,i+1);
+      bytes32 _id = sha3(__concat(proofSlice, dataSlice));
+      //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
+      Node storage child = nodes[_id];
+      if( child._type == byte(0x00) ) {
         //@debug not in trie
-        child._id = slice;
+        child._id = _id;
+        child.data = dataSlice;
         child._parent = parent._id;
         child._type = proof[i];
-        parent._children.push (slice);
+        parent._children.push (_id);
       }
+      dataIndex += atomBytes[proof[i]];
       parent = child;
     }
-    parent = nodes[""];
   }
 
   // TODO rewrite validation - simplify
@@ -134,20 +135,18 @@ contract Org is Test {
     return ((rule == byte(0xff))||(accepted[rule]));
   }
 
-  function getConsens() returns(byte[32] _consens) {
+  function getConsens() returns(bytes32 _consens) {
     //@info getting consens
     Node storage node = nodes[""];
-    //@log #children: `uint node._children.length` `bytes node._children[0]`
-    uint8 index = 0;
-    while ( node._type != byte(0xff) && node._children.length != 0 && index < 32) {
+    //@log #children: `uint node._children.length` `bytes32 node._children[0]`
+    while ( node._type != byte(0xff) && node._children.length != 0) {
       node = nodes[node._children[node._best_child]];
-      _consens[index++] = node._type;
     }
-    return _consens;
+    return node._id;
   }
 
   // TODO - the delegation property is not transitive - make this transitive
-  function getCandidatePerformance(bytes candidate) returns(uint performance) {
+  function getCandidatePerformance(bytes32 candidate) returns(uint performance) {
     // TODO - check if candidate is in Trie
 
     // var (delegations, votes) = _inheritBasis (candidate);
@@ -157,20 +156,8 @@ contract Org is Test {
     //
     // BUILD DELIGATION SET
     Node node = nodes[""];
-    uint8[32] memory delegations;
-    uint[32] memory votes;
     uint8 i;
-    for (i=0; i<candidate.length; i++) { // from root to candidate
-      node = nodes[__slice(candidate,0,i+1)];
-      for (var j=1; j<=numOwners; j++) { // inherit deligations
-        if( node.delegations[j] > 0 ) { // if delegations is set
-          delegations[j] = node.delegations[j]; // take
-        }
-        if( node.votes[j] > 0 ) {
-          votes[j] = node.votes[j];
-        }
-      }
-    }
+    var (delegations, votes) = _inheritBasis(candidate);
     // TODO - compute transitive hull of delegations
     for (i=1; i<=numOwners; i++) {
       if (votes[i] > 0) { // has voted
@@ -198,10 +185,10 @@ contract Org is Test {
   // }
 
   // TODO - to fucking expensive - play with ways to optimize this
-  function vote(bytes candidate, uint vote) returns(bool success) {
-    if( !isValide(candidate) ) throw;
+  function vote(bytes32 candidate, uint vote) returns(bool success) {
+    if( nodes[candidate]._type == byte(0x00) ) throw;
     if( vote > 1000 ) throw;
-    //@info owner `uint ownerId[msg.sender]` voted `uint vote` for `bytes candidate`
+    //@info owner `uint ownerId[msg.sender]` voted `uint vote` for `bytes32 candidate`
     Node node = nodes[candidate];
     node.votes[ownerId[msg.sender]] = vote;
     if(node._type != byte(0xff)) {
@@ -211,7 +198,7 @@ contract Org is Test {
     __correctBestChildRelation(node);
   }
 
-  function delegate(address to, bytes context) returns(bool success) {
+  function delegate(address to, bytes32 context) returns(bool success) {
     if(ownerId[to] == 0) throw;
     Node node = nodes[context];
     node.delegations[ownerId[msg.sender]] = ownerId[to];
@@ -231,7 +218,7 @@ contract Org is Test {
     while ( node._id.length > 0) {
       (delegations, votes) = _inheritBasis(node._id);
       performance = _getBestChildPerformance (delegations, votes, node);
-      //@log performance of node `bytes node._id` is `uint performance`
+      //@log performance of node `bytes32 node._id` is `uint performance`
       // if node is best child
       if( nodes[parent._children[parent._best_child]]._type == node._type ) {
         //@log node is best child
@@ -438,15 +425,15 @@ contract Org is Test {
   // }
 
 
-  function getNumChildrenFor(bytes candidate) returns(uint node) {
+  function getNumChildrenFor(bytes32 candidate) returns(uint node) {
     return nodes[candidate]._children.length;
   }
 
-  function getChildTypeAt(bytes candidate, uint8 i) returns(byte _type) {
+  function getChildTypeAt(bytes32 candidate, uint8 i) returns(byte _type) {
     return nodes[nodes[candidate]._children[i]]._type;
   }
 
-  function getBestChildIndex(bytes candidate) returns(uint8 index){
+  function getBestChildIndex(bytes32 candidate) returns(uint8 index){
     return nodes[candidate]._best_child;
   }
 
@@ -492,18 +479,18 @@ contract Org is Test {
     return performance;
   }
 
-  function _inheritBasis (bytes candidate) internal returns (uint8[32] delegations, uint[32] votes) {
-    Node node = nodes[""];
-    for (var i=0; i<candidate.length; i++) { // from root to candidate
-      node = nodes[__slice(candidate,0,i+1)];
-      for (var j=1; j<=numOwners; j++) { // inherit deligations
-        if( node.delegations[j] > 0 ) { // if delegations is set
-          delegations[j] = node.delegations[j]; // take
+  function _inheritBasis (bytes32 candidate) internal returns (uint8[32] delegations, uint[32] votes) {
+    Node node = nodes[candidate];
+    while( node._id != "" ) {
+      for (var i=1; i<=numOwners; i++) { // inherit deligations
+        if( delegations[i] == 0 && node.delegations[i] > 0 ) { // if delegations is set
+          delegations[i] = node.delegations[i]; // take
         }
-        if( node.votes[j] > 0 ) {
-          votes[j] = node.votes[j];
+        if( votes[i] == 0 && node.votes[i] > 0 ) {
+          votes[i] = node.votes[i];
         }
       }
+      node = nodes[node._parent];
     }
     return (delegations, votes);
   }
@@ -535,6 +522,18 @@ contract Org is Test {
       out[i] = fst[i];
     }
     return out;
+  }
+
+  function __concat(bytes a, bytes b) internal returns(bytes c) {
+    c = new bytes(a.length+b.length);
+    uint8 i;
+    for (i; i<a.length; i++) {
+      c[i] = a[i];
+    }
+    for (i; i<b.length; i++) {
+      c[i + a.length] = b[i];
+    }
+    return c;
   }
 
 }
