@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var colors = require('colors');
+var Rule = require('./rules.js');
 
 class Node {
 
@@ -10,26 +11,32 @@ class Node {
     ast.forEach( n => {
       if (n.name === 'def') {
         let name = n.args[0];
+        let rule = new Rule(name);
         if(!Node.rules[name]) Node.rules[name] = [];
         n.args[1].forEach( r => {
-          Node.rules[name].push(r.args);
+          rule.addTransition(r.args);
+          // Node.rules[name].push(r.args);
         });
       }
     });
   }
 
-  static setStart(rule) {
-    Node.start = rule;
+  static setStart(name) {
+    let rule = new Rule(name);
+    rule.setStart();
   }
 
   static normalize() {
-    Node.reduceSingleRules();
-    Node.findTerminals();
-    Node.addDelimiter();
-    Node.substitudeNonterminals();
-    Node.transformLookaheads();
-    Node.removeUnusedRules();
-    Node.bufferize();
+    Rule.contextualize();
+    Rule.addDelimiter();
+    Rule.format();
+    // Node.findTerminals();
+    // Node.addDelimiter();
+    // Node.reduceSingleRules();
+    // Node.substitudeNonterminals();
+    // Node.transformLookaheads();
+    // Node.removeUnusedRules();
+    // Node.bufferize();
   }
 
   static reduceSingleRules() {

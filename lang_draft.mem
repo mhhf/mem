@@ -7,7 +7,6 @@ def LandingPage:
 def Header:
   Title
   Title Subtitle
-  Title Subtitle Summery
 
 // must have at least one feature
 // this shows the kleene operator
