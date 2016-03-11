@@ -9,10 +9,10 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
   Org org;
   function setUp() {
     org = new Org(l_001);
-    org.propose("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","abb");
-    org.propose("aba","aba");
-    org.propose("aaaa","aaaa");
-    org.propose("aab","aab");
+    // org.propose("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","abb");
+    // org.propose("aba","aba");
+    // org.propose("aaaa","aaaa");
+    // org.propose("aab","aab");
     setupReporter('doc/report.md');
   }
 
@@ -30,6 +30,7 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
   function testLog() wrapCode('dot') {
     candidate = "";
     //@doc digraph A {
+    //@doc omg
     // __recLog();
     //@doc }
   }
