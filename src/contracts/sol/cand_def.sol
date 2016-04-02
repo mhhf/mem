@@ -9,18 +9,18 @@ contract CandidateDefinitions {
   bytes32 c_aabf;
   bytes32 c_aaaaf;
   bytes32 c_abbabaaaf;
-  bytes32 c_1101;
-  bytes32 c_0a;
+  bytes32 c_1101f;
+  bytes32 c_0af;
   bytes32 c_1a;
   bytes32 c_1;
   bytes32 c_b;
 
   function CandidateDefinitions() {
-    c_1101 = 0xa9becaa22b2e645d882879cff17db8bb8921b57e60994b6f16d43ed398f255c6;
-    c_0a = 0x5b410de4736992cdaea912d95acebb39c4a01677d802528d644fc5c775dce0f6;
-    c_1a = 0x5b410de4736992cdaea912d95acebb39c4a01677d802528d644fc5c775dce0f6;
-    c_b = 0x5b382b52854883aaa25b914dd76b68726d665cde64dd1f613f35fb35709effff;
-    c_1 = 0xa3fe1181ce8d13858f6f383445749f49a3ae8b0cab89823918bab81153ca4300;
+    c_1101f = 0x1b1ef1b9d19ba6ee620f2fedc2fff268707e7ae0a1c537c3c8720967aae27be8;
+    c_0af = 0x438e29568c0e34c0b97a76b0cccaed1c84b0242628317d868e7a1c68cbe0b79c;
+    c_1a = 0xe49522b88c44a445e4274b08fef1619ecaab832295e8ee2843ad42a50884bc68;
+    c_b = 0x484c611cdce1eb0131cc5dfa3df6aff98f0ea95a6a2395789a42777ae46cae71;
+    c_1 = 0xb4c00615f95dc249934075fcc669947596baf6e070ac80a59f79dae98aa932f0;
     // c_aff = new bytes(3);
     // c_aff[0] = byte(0x61);
     // c_aff[1] = byte(0xff);

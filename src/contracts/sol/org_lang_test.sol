@@ -3,6 +3,7 @@ import "org.sol";
 import "lang_def.sol";
 import "cand_def.sol";
 
+// TODO - test metalinearity
 contract LangTester is Test, LangDefinitions, CandidateDefinitions {
 
   // Language tests
@@ -15,17 +16,24 @@ contract LangTester is Test, LangDefinitions, CandidateDefinitions {
 
   // test start rule is final
   function testStartRuleIsFinal() {
-    Org org = new Org(l_001);
-    assertTrue(org.isValide(""));
-    assertTrue(org.isValide("a"));
-    assertTrue(org.isValide("b"));
-    assertTrue(org.isValide("abab"));
-    Org org2 = new Org(l_002);
-    assertTrue(org2.isValide(""));
-    assertTrue(org2.isValide("a"));
-    assertTrue(org2.isValide("b"));
-    assertTrue(org2.isValide("aaabb"));
+    bytes memory entryPoints = new bytes(1);
+    entryPoints[0] = byte(01);
+    Org org = new Org(l_001, entryPoints);
+    assertTrue(org.isValide(byte(0x01), ""));
+    assertTrue(org.isValide(byte(0x01), "a"));
+    assertTrue(org.isValide(byte(0x01), "b"));
+    assertTrue(org.isValide(byte(0x01), "abab"));
+    Org org2 = new Org(l_002, entryPoints);
+    assertTrue(org2.isValide(byte(0x01), ""));
+    assertTrue(org2.isValide(byte(0x01), "a"));
+    assertTrue(org2.isValide(byte(0x01), "b"));
+    assertTrue(org2.isValide(byte(0x01), "aaabb"));
   }
+
+  function renderCandidates() {
+    
+  }
+
 
   // function testCandidatesWithEndMark() {
   //   Org org = new Org(l_001);
@@ -36,12 +44,14 @@ contract LangTester is Test, LangDefinitions, CandidateDefinitions {
 
   // test start rule is not final
   function testStartRuleIsNotFinal() {
-    Org org = new Org(l_003);
-    assertTrue(org.isValide("a"));
-    assertTrue(org.isValide("aab"));
-    assertFalse(org.isValide("b"));
-    assertFalse(org.isValide(""));
-    assertFalse(org.isValide("ac"));
+    bytes memory entryPoints = new bytes(1);
+    entryPoints[0] = byte(01);
+    Org org = new Org(l_003, entryPoints);
+    assertTrue(org.isValide(byte(0x01), "a"));
+    assertTrue(org.isValide(byte(0x01), "aab"));
+    assertFalse(org.isValide(byte(0x01), "b"));
+    assertFalse(org.isValide(byte(0x01), ""));
+    assertFalse(org.isValide(byte(0x01), "ac"));
   }
 
 }

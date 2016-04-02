@@ -1,5 +1,0 @@
-```{dot}
-digraph A {
-omg
-}
-```

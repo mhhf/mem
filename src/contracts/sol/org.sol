@@ -22,43 +22,73 @@ contract Org is Test {
   //        an optimisation could be refering to addresses
   //        saved in an global ownership table, but what if they change?
   struct Node {
-    byte _type;
+    // sha3(__concat(parent._id, __concat(proofSlice, dataSlice)))
     bytes32 _id;
-    bytes32 _parent;
-    bytes32[] _children;
-    uint8 _best_child; // index
 
+    byte _state; // the current state in the language graph
+    byte _type; // last read terminal - the data type
     bytes data;
+
+    bytes32 _parent; // link to parent node
+    bytes32[] _children; // links to all children
+    uint8 _best_child; // index of best performing child - only needed for runtime optimisation (reduce complexity)
+    bool _entry; // bool, which indecates if this node is an entry node (node of the metalinarity level)
+
+    // TODO - verify if this still holds
     // delegation is a set with d.length % 2 == 0
     // i   = owner._id
     // i+1 = vote ammount
     uint8[32] delegations;
-    // mapping (address => address[]) delegations;
-    // mapping (address => uint) votes;
+
+    // Votes is a array. The index of an array represents an owner and
+    // the value of the array represents its votes:
+    // OwnerId => Vote
     uint[32] votes;
   }
-  bytes consens;
 
+  // Set of possible types
   mapping (byte => uint8) atomBytes;
+
+  // notes in the trie
+  ///@dev bytes32 - nodeId's: 
+  // sha3(__concat(parent._id, __concat(proofSlice, dataSlice)))
   mapping (bytes32 => Node) nodes;
 
+  // OWNERS
   mapping (uint8 => address) owners;
   mapping (address => uint8) ownerId;
   uint8 public numOwners;
+
+  // SHARES
   mapping (uint8 => uint) public shares;
 
+  // DIRECTED GRAPH
   // Organisation Language
   mapping (byte => mapping (byte => byte)) R;
   mapping (byte => bool) accepted; // accepted rules
+
+  // MULTILINIARITY
+  // Entry points are a subset of nonterminals of the language
+  bytes entryPoints;
 
   // Gets an byte array where each byte is (N -> t N)
   // i%3=0 is current rule
   // i%3=1 is terminal
   // i%3=2 is next rule
-  function Org(bytes grammar) {
+  function Org(bytes grammar, bytes _entryPoints) {
     // grammar has to be in right linear form
-    if( grammar.length % 3 != 0 )
-      throw;
+    // if( grammar.length % 3 != 0 )
+    //   throw;
+
+    // setup entry points
+    entryPoints = _entryPoints;
+    for (var j = 0; j < entryPoints.length; j++) {
+      Node node = nodes[bytes32(entryPoints[j])];
+      node._state = entryPoints[j];
+      node._entry = true;
+      node._id = bytes32(entryPoints[j]);
+      //@log created `bytes32 node._id`
+    }
 
     // INITIALIZE orga with 10000 shares
     numOwners = 1;
@@ -67,17 +97,20 @@ contract Org is Test {
     shares[1] = 10000;
 
     // create start option set:
-    for(var i=0; i < grammar.length; i+=3 ) {
+    uint8 i = 0;
+    while (i < grammar.length) {
+      uint8 length = uint8(grammar[i++]);
       if( grammar[i+1] == byte(0xff) ) { // end
         accepted[grammar[i]] = true;
       }
       R[grammar[i]][grammar[i+1]]=grammar[i+2];
+      i += length;
     }
 
-    atomBytes[byte(0x61)] = 1; // bool
+    atomBytes[byte(0x61)] = 1;  // bool
     atomBytes[byte(0x62)] = 32; // bytes256
     atomBytes[byte(0x63)] = 32; // uint256
-    atomBytes[byte(0xff)] = 0; // bottom ($)
+    atomBytes[byte(0xff)] = 0;  // bottom ($)
   }
 
   function send(address to, uint value) {
@@ -92,56 +125,80 @@ contract Org is Test {
     }
   }
 
+  // TODO propose happenes always on a start rule/ entry point
   // TODO - test if data has valide length
-  function propose(bytes data, bytes _proof) {
+  function propose(bytes32 _nodeId, bytes data, bytes _proof) {
     // assert atoicity
-    if( !isValide(_proof) ) throw;
+    // if( !isValide(byte(0x01), _proof) ) throw;
 
+    // only the submision of complete words is allowed.
+    // here we exend the proof candidate with an end of line symbol
     bytes memory proof = __extend(_proof, 1);
     proof[_proof.length] = byte(0xff);
+
     //@log proposing candidate: `bytes proof`
     uint8 dataIndex = 0;
-    Node storage parent = nodes[""];
+
+    Node storage parent = nodes[_nodeId];
+
+    byte state = parent._state;
+    if(state == byte(0x00)) throw; // node is not available
+
+    // bytes memory _entryPoint = new bytes(1);
+    // _entryPoint[0] = entryPoint;
+
+
+
     for (var i=0; i<proof.length; i++) {
       bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
       bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
-      bytes memory proofSlice = __slice(proof,0,i+1);
-      bytes32 _id = sha3(__concat(proofSlice, dataSlice));
+      bytes memory proofSlice = __slice(proof, 0, i+1);
+      bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
       //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
       Node storage child = nodes[_id];
+      // step in the graph based on the lookahead
+      state = R[state][proof[i]];
+      //@log state step `byte state`
+      if(state == byte(0x00)) throw;
+      // TODO - test invalide words - should i test here for 0xff?
       if( child._type == byte(0x00) ) {
-        //@debug not in trie
+        //@log not in trie `bytes32 _id`
         child._id = _id;
         child.data = dataSlice;
+        //@log `bytes32 parent._id`
         child._parent = parent._id;
-        child._type = proof[i];
+        child._type = proof [i];
+        child._state = state;
         parent._children.push (_id);
       }
       dataIndex += atomBytes[proof[i]];
       parent = child;
     }
+    // TODO - simplify
+    if(state != byte(0xff) || accepted[state]) throw; // if word is not in a final state
   }
 
   // TODO rewrite validation - simplify
-  function isValide(bytes word) returns (bool) {
-    byte rule = byte(0x01);
-    for( var i=0; i<word.length; i++) {
+  function isValide(byte _entry, bytes word) returns (bool) {
+    byte rule = _entry;
+    for (var i = 0; i < word.length; i++) {
       rule = R[rule][word[i]];
-      if( rule == byte(0xff) )
+      if (rule == byte(0xff))
         return true;
-      if( rule == byte(0x00) && i<word.length-1 )
+      if (rule == byte(0x00) && i < word.length - 1)
         return false;
     }
-    return ((rule == byte(0xff))||(accepted[rule]));
+    return ((rule == byte(0xff)) || (accepted[rule]));
   }
 
-  function getConsens() returns(bytes32 _consens) {
+  function getConsens(bytes32 _nodeId) returns(bytes32 _consens) {
     //@info getting consens
-    Node storage node = nodes[""];
+    Node storage node = nodes[_nodeId];
     //@log #children: `uint node._children.length` `bytes32 node._children[0]`
     while ( node._type != byte(0xff) && node._children.length != 0) {
       node = nodes[node._children[node._best_child]];
     }
+    //@log consens `bytes32 node._id`
     return node._id;
   }
 
@@ -155,7 +212,6 @@ contract Org is Test {
 
     //
     // BUILD DELIGATION SET
-    Node node = nodes[""];
     uint8 i;
     var (delegations, votes) = _inheritBasis(candidate);
     // TODO - compute transitive hull of delegations
@@ -215,7 +271,7 @@ contract Org is Test {
     uint performance_;
     uint8 i;
 
-    while ( node._id.length > 0) {
+    while (!node._entry) {
       (delegations, votes) = _inheritBasis(node._id);
       performance = _getBestChildPerformance (delegations, votes, node);
       //@log performance of node `bytes32 node._id` is `uint performance`
@@ -245,7 +301,7 @@ contract Org is Test {
         //@log performance of previous best child was `uint performance_`
         // compare to nodes performance
         if( performance > performance_ ) {
-          //@log node got new best child
+          //@log node got new best child out of `uint parent._children.length` children
           // swptch parents best child to node
           for(i=0; i<parent._children.length; i++) {
             if(nodes[parent._children[i]]._type == node._type) {
@@ -429,8 +485,17 @@ contract Org is Test {
     return nodes[candidate]._children.length;
   }
 
+  ///@dev 
   function getChildTypeAt(bytes32 candidate, uint8 i) returns(byte _type) {
-    return nodes[nodes[candidate]._children[i]]._type;
+
+    // get the node
+    Node node = nodes[candidate];
+
+    // get node child
+    bytes32 child = node._children[i];
+
+    //return the type of the child
+    return nodes[child]._type;
   }
 
   function getBestChildIndex(bytes32 candidate) returns(uint8 index){
@@ -522,6 +587,18 @@ contract Org is Test {
       out[i] = fst[i];
     }
     return out;
+  }
+
+  function __concat(bytes32 a, bytes b) internal returns(bytes c) {
+    c = new bytes(a.length+b.length);
+    uint8 i;
+    for (i; i<a.length; i++) {
+      c[i] = a[i];
+    }
+    for (i; i<b.length; i++) {
+      c[i + a.length] = b[i];
+    }
+    return c;
   }
 
   function __concat(bytes a, bytes b) internal returns(bytes c) {

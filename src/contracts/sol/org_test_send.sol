@@ -10,10 +10,12 @@ contract OrgOwnerTester is Test, Reporter, LangDefinitions, CandidateDefinitions
   Tester T2; address t2;
   Org org;
   function setUp() {
-    org = new Org(l_001);
-    org.propose("1101","aaaa");
-    org.propose("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    bytes memory entryPoints = new bytes(1);
+    entryPoints[0] = byte(01);
+    org = new Org(l_001, entryPoints);
+    org.propose(bytes32(byte(0x01)), "1101","aaaa");
+    org.propose(bytes32(byte(0x01)), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(byte(0x01)), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
     setupReporter('doc/report.md');
     T1 = new Tester(); t1 = address(T1);
     T2 = new Tester(); t2 = address(T2);
