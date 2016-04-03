@@ -92,7 +92,7 @@ contract Org is Test {
     // }
 
     bytes memory startstate = new bytes(1);
-    startstate[0] = byte(0x01);
+    startstate[0] = byte("S");
     // setup start node
     Node node = nodes[""];
     node._state = startstate;
@@ -111,7 +111,7 @@ contract Org is Test {
     uint8 i = 0;
     while (i < grammar.length) {
       uint8 length = uint8(grammar[i++]);
-      if( grammar[i+1] == byte(0xff) ) { // end
+      if( grammar[i+1] == byte("$") ) { // end
         accepted[grammar[i]] = true;
       }
       bytes memory rule = __slice(grammar, i + 2, i + length);
@@ -133,7 +133,7 @@ contract Org is Test {
     atomBytes[byte(0x62)] = 32; // bytes256
     atomBytes[byte(0x63)] = 32; // uint256
     atomBytes[byte(0x70)] = 0;  // parallel voting type
-    atomBytes[byte(0xff)] = 0;  // bottom ($)
+    atomBytes[byte("$")] = 0;  // bottom ($)
   }
 
   function send(address to, uint value) {
@@ -152,12 +152,12 @@ contract Org is Test {
   // TODO - test if data has valide length
   function propose(bytes32 _nodeId, bytes data, bytes _proof) {
     // assert atoicity
-    // if( !isValide(byte(0x01), _proof) ) throw;
+    // if( !isValide(byte("S"), _proof) ) throw;
 
     // only the submision of complete words is allowed.
     // here we exend the proof candidate with an end of line symbol
     bytes memory proof = __extend(_proof, 1);
-    proof[_proof.length] = byte(0xff);
+    proof[_proof.length] = byte("$");
 
     //@log proposing candidate: `bytes proof`
     uint8 dataIndex = 0;
@@ -183,7 +183,7 @@ contract Org is Test {
       //@log proof: `byte proof[i]`
       //@log state step `bytes state`
       if(state.length == 0) throw;
-      // TODO - test invalide words - should i test here for 0xff?
+      // TODO - test invalide words - should i test here for "$"?
       if( child._type == byte(0x00) ) {
         //@log not in trie `bytes32 _id`
         child._id = _id;
@@ -198,20 +198,20 @@ contract Org is Test {
       parent = child;
     }
     // TODO - simplify
-    // if(state != byte(0xff) || accepted[state]) throw; // if word is not in a final state
+    // if(state != byte("$") || accepted[state]) throw; // if word is not in a final state
   }
 
   // TODO rewrite validation - simplify
   function isValide(bytes proof) returns (bool) {
     // init with start state
     bytes memory state = new bytes(1);
-    state[0] = byte(0x01);
+    state[0] = byte("S");
 
     for (var i = 0; i < proof.length; i++) {
       bytes memory nextstate = R[state[0]][proof[i]];
       if(nextstate.length == 0) {
         return false;
-      } else if(nextstate.length == 1 && nextstate[0] == byte(0xff)) {
+      } else if(nextstate.length == 1 && nextstate[0] == byte("$")) {
         state = __slice(state, 1, uint8(state.length));
       } else {
         state = __concat(nextstate, __slice(state, 1, uint8(state.length)));
@@ -221,7 +221,7 @@ contract Org is Test {
     return (
       state.length == 0 
         || (state.length == 1
-            && (state[0] == byte(0xff)
+            && (state[0] == byte("$")
                || accepted[state[0]])
            ));
   }
@@ -230,7 +230,7 @@ contract Org is Test {
     //@info getting consens
     Node storage node = nodes[_nodeId];
     //@log #children: `uint node._children.length` `bytes32 node._children[0]`
-    while ( node._type != byte(0xff) && node._children.length != 0) {
+    while ( node._type != byte("$") && node._children.length != 0) {
       node = nodes[node._children[node._best_child]];
     }
     //@log consens `bytes32 node._id`
@@ -282,7 +282,7 @@ contract Org is Test {
     //@info owner `uint ownerId[msg.sender]` voted `uint vote` for `bytes32 candidate`
     Node node = nodes[candidate];
     node.votes[ownerId[msg.sender]] = vote;
-    if(node._type != byte(0xff)) {
+    if(node._type != byte("$")) {
       var (delegations, votes) = _inheritBasis(node._id);
       __correctBestChildRelationBottom(delegations, votes, node);
     }
@@ -374,7 +374,7 @@ contract Org is Test {
       }
     }
 
-    if( node._type != byte(0xff) ) {
+    if( node._type != byte("$") ) {
       uint8 bestIndex;
       for (i=0; i<node._children.length; i++) {
         uint tmpPerformance = __correctBestChildRelationBottom(delegations,votes, nodes[node._children[i]]);
@@ -486,7 +486,7 @@ contract Org is Test {
   //   byte[32] memory _cs;
   //   uint _ci = 0;
   //   uint i;
-  //   if( os._type != byte(0xff) ) { //if the Node has children
+  //   if( os._type != byte("$") ) { //if the Node has children
   //     uint maxPerformance;
   //     // search for the child with the best performance
   //     for (i =0; i<os.children.length; i++) {
@@ -546,7 +546,7 @@ contract Org is Test {
   // ORG UTILS
   function _getBestChild( Node storage node ) internal returns(Node storage best) {
     uint performance = 0;
-    while ( node._type != byte(0xff) && node._children.length != 0 ) {
+    while ( node._type != byte("$") && node._children.length != 0 ) {
       node = nodes[node._children[node._best_child]];
     }
     return node;
@@ -557,7 +557,7 @@ contract Org is Test {
                                       uint[32] memory votes, Node node)
                                       internal returns(uint performance) {
     uint8 i;
-    while (node._type != byte(0xff) && node._children.length != 0) {
+    while (node._type != byte("$") && node._children.length != 0) {
       node = nodes[node._children[node._best_child]];
       for (var j=1; j<=numOwners; j++) { // inherit deligations
         if( node.delegations[j] > 0 ) { // if delegations is set
