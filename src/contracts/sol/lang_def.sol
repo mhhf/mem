@@ -3,6 +3,7 @@ contract LangDefinitions {
   bytes l_001; // (a|b)*
   bytes l_002; // a*b*
   bytes l_003; // a+b*
+  bytes l_004; // a+b*
 
   function LangDefinitions() {
     // S -> aS
@@ -92,5 +93,47 @@ contract LangDefinitions {
     l_003[21] = byte(0x03);
     l_003[22] = byte(0xff);
     l_003[23] = byte(0xff);
+
+    l_004 = new bytes(29);
+    // S -> pAB
+    l_004[0] = byte(0x04);
+    l_004[1] = byte(0x01);
+    l_004[2] = byte("p");
+    l_004[3] = byte("A");
+    l_004[4] = byte("B");
+    // S -> cC
+    l_004[5] = byte(0x03);
+    l_004[6] = byte(0x01);
+    l_004[7] = byte("c");
+    l_004[8] = byte("C");
+    // final(c)
+    l_004[9] = byte(0x03);
+    l_004[10] = byte("C");
+    l_004[11] = byte(0xff);
+    l_004[12] = byte(0xff);
+    // A -> aA
+    l_004[13] = byte(0x03);
+    l_004[14] = byte("A");
+    l_004[15] = byte("a");
+    l_004[16] = byte("A");
+    // B -> bB
+    l_004[17] = byte(0x03);
+    l_004[18] = byte("B");
+    l_004[19] = byte("b");
+    l_004[20] = byte("B");
+    // final(A)
+    l_004[21] = byte(0x03);
+    l_004[22] = byte("A");
+    l_004[23] = byte(0xff);
+    l_004[24] = byte(0xff);
+    // final(B)
+    l_004[25] = byte(0x03);
+    l_004[26] = byte("B");
+    l_004[27] = byte(0xff);
+    l_004[28] = byte(0xff);
+
   }
+
+  
+
 }

@@ -16,7 +16,8 @@ contract CandidateDefinitions {
   bytes32 c_b;
 
   function CandidateDefinitions() {
-    c_1101f = 0x1b1ef1b9d19ba6ee620f2fedc2fff268707e7ae0a1c537c3c8720967aae27be8;
+    // Org org = new Orga("");
+    // c_1101f = org.getChildIds("1101","aaaa");
     c_0af = 0x438e29568c0e34c0b97a76b0cccaed1c84b0242628317d868e7a1c68cbe0b79c;
     c_1a = 0xe49522b88c44a445e4274b08fef1619ecaab832295e8ee2843ad42a50884bc68;
     c_b = 0x484c611cdce1eb0131cc5dfa3df6aff98f0ea95a6a2395789a42777ae46cae71;

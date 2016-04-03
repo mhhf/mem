@@ -8,34 +8,37 @@ contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions, CandidateDe
 
   Org org;
   function setUp() {
-    bytes memory entryPoints = new bytes(1);
-    entryPoints[0] = byte(01);
-    org = new Org(l_001, entryPoints);
-    org.propose(bytes32(byte(0x01)), "1101","aaaa");
-    org.propose(bytes32(byte(0x01)), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(byte(0x01)), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(byte(0x01)), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    org = new Org(l_001);
+    org.propose(bytes32(""), "1101","aaaa");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
     // setupReporter('doc/report.md');
   }
 
   function testCorrectlyInitiateFirstConsensCandidate() {
-    assertTrue(__consensEq(org.getConsens(bytes32(byte(0x01))), c_1101f));
+    org = new Org(l_001);
+    org.propose(bytes32(""), "1101","aaaa");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    assertTrue(__consensEq(org.getConsens(bytes32("")), org.getChildId("1101","aaaa")));
   }
 
   function testCorrectlySwitchesToNewTestCandidate() {
     org.vote(c_0af, 100);
-    assertTrue(__consensEq(org.getConsens(bytes32(byte(0x01))), c_0af));
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_0af));
   }
 
   function testCorrectlyVotesForMiddleCandidate() {
     org.vote(c_1, 200);
-    assertTrue(__consensEq(org.getConsens(bytes32(byte(0x01))), c_1101f));
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101f));
   }
 
   function testCorrectlyPropagatesVotesDownTheTree() logs_gas {
     org.vote(c_1a, 10);
     org.vote(c_1, 200);
-    assertTrue(__consensEq(org.getConsens(bytes32(byte(0x01))), c_1101f));
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101f));
   }
 
   function __consensEq(bytes32 a, bytes32 bs) internal returns(bool success){

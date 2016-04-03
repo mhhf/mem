@@ -13,6 +13,7 @@ contract Org is Test {
   // 0x61 - bool
   // 0x62 - string256
   // 0x63 - uint256
+  // 0x70 - paralell voting Type
 
   // Nonatomic Terminals
   // Has to be explicitly linked
@@ -25,7 +26,7 @@ contract Org is Test {
     // sha3(__concat(parent._id, __concat(proofSlice, dataSlice)))
     bytes32 _id;
 
-    byte _state; // the current state in the language graph
+    bytes _state; // the Nonterminal String, which should be derivated next
     byte _type; // last read terminal - the data type
     bytes data;
 
@@ -64,7 +65,7 @@ contract Org is Test {
 
   // DIRECTED GRAPH
   // Organisation Language
-  mapping (byte => mapping (byte => byte)) R;
+  mapping (byte => mapping (byte => bytes)) R;
   mapping (byte => bool) accepted; // accepted rules
 
   // MULTILINIARITY
@@ -75,20 +76,30 @@ contract Org is Test {
   // i%3=0 is current rule
   // i%3=1 is terminal
   // i%3=2 is next rule
-  function Org(bytes grammar, bytes _entryPoints) {
+  function Org(bytes grammar) {
     // grammar has to be in right linear form
     // if( grammar.length % 3 != 0 )
     //   throw;
 
     // setup entry points
-    entryPoints = _entryPoints;
-    for (var j = 0; j < entryPoints.length; j++) {
-      Node node = nodes[bytes32(entryPoints[j])];
-      node._state = entryPoints[j];
-      node._entry = true;
-      node._id = bytes32(entryPoints[j]);
-      //@log created `bytes32 node._id`
-    }
+    // entryPoints = _entryPoints;
+    // for (var j = 0; j < entryPoints.length; j++) {
+    //   Node node = nodes[bytes32(entryPoints[j])];
+    //   node._state = entryPoints[j];
+    //   node._entry = true;
+    //   node._id = bytes32(entryPoints[j]);
+    //   //@log created `bytes32 node._id`
+    // }
+
+    bytes memory startstate = new bytes(1);
+    startstate[0] = byte(0x01);
+    // setup start node
+    Node node = nodes[""];
+    node._state = startstate;
+    node._entry = true;
+    node._id = "";
+
+    uint8 internalRule = 0xf0;
 
     // INITIALIZE orga with 10000 shares
     numOwners = 1;
@@ -103,13 +114,25 @@ contract Org is Test {
       if( grammar[i+1] == byte(0xff) ) { // end
         accepted[grammar[i]] = true;
       }
-      R[grammar[i]][grammar[i+1]]=grammar[i+2];
+      bytes memory rule = __slice(grammar, i + 2, i + length);
+      if( grammar[i+1] == byte("p") ) { // parallel Kernel
+        R[grammar[i]][grammar[i + 1]] = __toBytes(internalRule);
+        for (var j=0; j<rule.length; j++) {
+          // TODO -test for collision of types
+          R[byte(internalRule)][rule[j]] = __toBytes(rule[j]);
+        }
+        // TODO - test overflow
+        internalRule++;
+      } else {
+        R[grammar[i]][grammar[i + 1]] = rule;
+      }
       i += length;
     }
 
     atomBytes[byte(0x61)] = 1;  // bool
     atomBytes[byte(0x62)] = 32; // bytes256
     atomBytes[byte(0x63)] = 32; // uint256
+    atomBytes[byte(0x70)] = 0;  // parallel voting type
     atomBytes[byte(0xff)] = 0;  // bottom ($)
   }
 
@@ -141,25 +164,25 @@ contract Org is Test {
 
     Node storage parent = nodes[_nodeId];
 
-    byte state = parent._state;
-    if(state == byte(0x00)) throw; // node is not available
+    bytes memory state = parent._state;
+    if(state.length == 0) throw; // node is not available
 
     // bytes memory _entryPoint = new bytes(1);
     // _entryPoint[0] = entryPoint;
 
 
-
     for (var i=0; i<proof.length; i++) {
       bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
-      bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
+      // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
       bytes memory proofSlice = __slice(proof, 0, i+1);
       bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
       //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
       Node storage child = nodes[_id];
       // step in the graph based on the lookahead
-      state = R[state][proof[i]];
-      //@log state step `byte state`
-      if(state == byte(0x00)) throw;
+      state = __concat(R[state[0]][proof[i]], __slice(state, 1, uint8(state.length)));
+      //@log proof: `byte proof[i]`
+      //@log state step `bytes state`
+      if(state.length == 0) throw;
       // TODO - test invalide words - should i test here for 0xff?
       if( child._type == byte(0x00) ) {
         //@log not in trie `bytes32 _id`
@@ -175,20 +198,32 @@ contract Org is Test {
       parent = child;
     }
     // TODO - simplify
-    if(state != byte(0xff) || accepted[state]) throw; // if word is not in a final state
+    // if(state != byte(0xff) || accepted[state]) throw; // if word is not in a final state
   }
 
   // TODO rewrite validation - simplify
-  function isValide(byte _entry, bytes word) returns (bool) {
-    byte rule = _entry;
-    for (var i = 0; i < word.length; i++) {
-      rule = R[rule][word[i]];
-      if (rule == byte(0xff))
-        return true;
-      if (rule == byte(0x00) && i < word.length - 1)
+  function isValide(bytes proof) returns (bool) {
+    // init with start state
+    bytes memory state = new bytes(1);
+    state[0] = byte(0x01);
+
+    for (var i = 0; i < proof.length; i++) {
+      bytes memory nextstate = R[state[0]][proof[i]];
+      if(nextstate.length == 0) {
         return false;
+      } else if(nextstate.length == 1 && nextstate[0] == byte(0xff)) {
+        state = __slice(state, 1, uint8(state.length));
+      } else {
+        state = __concat(nextstate, __slice(state, 1, uint8(state.length)));
+      }
     }
-    return ((rule == byte(0xff)) || (accepted[rule]));
+    //@log endstate `bytes state`
+    return (
+      state.length == 0 
+        || (state.length == 1
+            && (state[0] == byte(0xff)
+               || accepted[state[0]])
+           ));
   }
 
   function getConsens(bytes32 _nodeId) returns(bytes32 _consens) {
@@ -560,6 +595,19 @@ contract Org is Test {
     return (delegations, votes);
   }
 
+  function getChildId(bytes data, bytes proof) returns (bytes32 _id){
+    _id = bytes32("");
+    uint8 dataIndex = 0;
+    for(var i = 0; i < proof.length; i++) {
+      bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
+      bytes memory proofSlice = __slice(proof, 0, i+1);
+      _id = sha3(__concat(_id, __concat(proofSlice, dataSlice)));
+      dataIndex += atomBytes[proof[i]];
+    }
+    //@debug child `bytes32 _id`
+    return _id;
+  }
+
   // function _findBestPerformingChild( Node _node ) internal returns(Node storage best) {
   //   uint performance= 0;
   //   for (var j=0; j<_node._children.length; j++) {
@@ -611,6 +659,17 @@ contract Org is Test {
       c[i + a.length] = b[i];
     }
     return c;
+  }
+
+  function __toBytes(uint8 what) internal returns (bytes) {
+    bytes memory ret = new bytes(1);
+    ret[0] = byte(what);
+    return ret;
+  }
+  function __toBytes(byte what) internal returns (bytes) {
+    bytes memory ret = new bytes(1);
+    ret[0] = what;
+    return ret;
   }
 
 }

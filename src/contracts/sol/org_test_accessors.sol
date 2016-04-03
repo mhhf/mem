@@ -8,9 +8,7 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
 
   Org org;
   function setUp() {
-    bytes memory entryPoints = new bytes(1);
-    entryPoints[0] = byte(01);
-    org = new Org(l_001, entryPoints);
+    org = new Org(l_001);
     org.propose(bytes32(byte(0x01)), "1101", "aaaa");
     org.propose(bytes32(byte(0x01)), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab");
     org.propose(bytes32(byte(0x01)), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab");
@@ -33,28 +31,28 @@ contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefiniti
     candidate = "";
     //@doc digraph A {
     //@doc omg
-    __recLog();
+    // __recLog();
     //@doc }
   }
 
-  function __recLog() internal {
-    uint numChildren = org.getNumChildrenFor(candidate);
-    bytes memory cand = candidate;
-    uint length = candidate.length++;
-    uint bestChild = org.getBestChildIndex(candidate);
-    for(var i=0; i<numChildren; i++) {
-      byte _type = org.getChildTypeAt(cand, i);
-      candidate[length] = _type;
-      if(i==bestChild) {
-        //@doc "`bytes cand`" -> "`bytes candidate`";
-      } else {
-        //@doc "`bytes cand`" -> "`bytes candidate`" [style=dotted];
-      }
-      //@doc "`bytes candidate`" [label="`byte _type`"];
-      __recLog();
-    }
-    candidate.length--;
-  }
+  // function __recLog() internal {
+  //   uint numChildren = org.getNumChildrenFor(candidate);
+  //   bytes32 memory cand = candidate;
+  //   uint length = candidate.length++;
+  //   uint bestChild = org.getBestChildIndex(candidate);
+  //   for(var i=0; i<numChildren; i++) {
+  //     byte _type = org.getChildTypeAt(cand, i);
+  //     candidate[length] = _type;
+  //     if(i==bestChild) {
+  //       //@doc "`bytes cand`" -> "`bytes candidate`";
+  //     } else {
+  //       //@doc "`bytes cand`" -> "`bytes candidate`" [style=dotted];
+  //     }
+  //     //@doc "`bytes candidate`" [label="`byte _type`"];
+  //     __recLog();
+  //   }
+  //   candidate.length--;
+  // }
 
   // function testCandidatePerformance () logs_gas {
   //   // org = new Org(l_001);

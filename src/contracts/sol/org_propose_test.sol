@@ -11,14 +11,21 @@ contract OrgProposeTester is Test, LangDefinitions, CandidateDefinitions {
   }
 
   function testSimplePropose() {
-    bytes memory entryPoints = new bytes(1);
-    entryPoints[0] = byte(01);
-    Org org = new Org(l_001, entryPoints);
-    org.propose(bytes32(byte(0x01)), "1101","aaaa");
-    org.propose(bytes32(byte(0x01)), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(byte(0x01)), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(byte(0x01)), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    Org org = new Org(l_001);
+    org.propose(bytes32(""), "1101","aaaa");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
   }
 
+  function testParallelKernel() {
+    Org org = new Org(l_004);
+    org.propose(bytes32(""), "0","pAa");
+    org.propose(bytes32(""), "1","pAa");
+    org.propose(bytes32(""), "01","pAaa");
+    org.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
+    org.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
+    org.propose(bytes32(""), "00000000000000000000000000000042","c");
+  }
 
 }
