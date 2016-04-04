@@ -89,15 +89,16 @@ contract Org is TypeDef {
     //   //@log created `bytes32 node._id`
     // }
 
-    bytes memory startstate = new bytes(1);
-    startstate[0] = byte("S$");
+    // bytes memory startstate = new bytes(1);
+    // startstate[0] = "S$"
     // setup start node
     Node node = nodes[""];
-    node._state = startstate;
+    node._state = "S$";
     node._entry = true;
     node._id = "";
 
-    uint8 internalRule = 0xf0;
+    uint8 internalRule = 0x4f;
+    uint8 parallelityContext = 0x71;
 
     // INITIALIZE orga with 10000 shares
     numOwners = 1;
@@ -114,11 +115,16 @@ contract Org is TypeDef {
       }
       bytes memory rule = __slice(grammar, i + 1, i + length);
       if (grammar[i+1] == byte("p")) { // parallel Kernel
-        R[grammar[i]][grammar[i + 1]] = __toBytes(internalRule);
-        for (var j = 1; j < rule.length; j++) {
-          // TODO -test for collision of types
-          R[byte(internalRule)][rule[j]] = __toBytes(rule[j]);
-        }
+        ////@log `byte grammar[i]` `byte grammar[i + 1]` -> `byte internalRule`
+        R[grammar[i]][grammar[i + 1]] = __toBytes(byte("p"));
+        // R[grammar[i]][grammar[i + 1]] = __concat(__toBytes(byte("p")), __toBytes(byte(internalRule)));
+        // for (var j = 1; j < rule.length; j++) {
+        //   // TODO -test for collision of types
+        //   bytes memory nr = __concat(__toBytes(byte(parallelityContext)), __toBytes(rule[j]));
+        //   //@log nr `bytes nr`
+        //   R[byte(internalRule)][byte(parallelityContext++)] = nr;
+        // }
+        // parallelityContext = 0x71;
         // TODO - test overflow
         internalRule++;
       } else {
@@ -162,33 +168,66 @@ contract Org is TypeDef {
     // bytes memory _entryPoint = new bytes(1);
     // _entryPoint[0] = entryPoint;
 
+    uint8 i = 0;
+    while(state.length > 0) {
 
-    for (var i=0; i<proof.length; i++) {
-      bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
-      // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
-      bytes memory proofSlice = __slice(proof, 0, i + 1);
-      bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
-      //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
-      Node storage child = nodes[_id];
-      // step in the graph based on the lookahead
-      state = __concat(R[state[0]][proof[i]], __slice(state, 1, uint8(state.length)));
-      //@log proof: `byte proof[i]`
-      //@log state step `bytes state`
-      if(state.length == 0) throw;
-      // TODO - test invalide words - should i test here for "$"?
-      if( child._type == byte(0x00) ) {
-        //@log not in trie `bytes32 _id`
-        child._id = _id;
-        child.data = dataSlice;
-        //@log `bytes32 parent._id`
-        child._parent = parent._id;
-        child._type = proof [i];
-        child._state = state;
-        parent._children.push (_id);
+      //@log state `string string(state)`
+      if(state.length == 0) {
+        throw;
+      } else if (state.length == 1 && state[0] == byte(0x01) ) { // epsilon
+        state = __slice(state, 1, uint8(state.length));
+      } else if (byte(0x41) <= state[0] && state[0] <= byte(0x5a)) { // nonterminal
+        bytes memory newstate = R[state[0]][proof[i]];
+        //@log lookahead is nonterminal -> reduce to `bytes newstate`
+        if(newstate.length == 0) throw;
+        state = __concat(newstate, __slice(state, 1, uint8(state.length))); // reduce
+      } else { // terminal
+        //@log lookahead is terminal -> shift
+
+
+        bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
+        // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
+        bytes memory proofSlice = __slice(proof, 0, i + 1);
+        bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
+        //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
+        Node storage child = nodes[_id];
+        // step in the graph based on the lookahead
+        // state = __concat(R[state[0]][proof[i]], __slice(state, 1, uint8(state.length)));
+        //@log proof: `byte proof[i]`
+        //@log state step `bytes state`
+        // TODO - test invalide words - should i test here for "$"?
+        if( child._type == byte(0x00) ) {
+          //@log not in trie `bytes32 _id`
+          child._id = _id;
+          child.data = dataSlice;
+          //@log `bytes32 parent._id`
+          child._parent = parent._id;
+          child._type = proof [i];
+          child._state = state;
+          parent._children.push (_id);
+        }
+        dataIndex += atomBytes[proof[i]];
+        parent = child;
+        if (state[0] == byte("$")) {
+          if (proof[i] != byte("$")) throw;
+          break;
+        }
+        //@log proof state `byte proof[i]` `byte state[0]`
+        if (proof[i] == byte("p")) {
+          //TODO -test if nonterminal is actually in rule
+          state[0] = dataSlice[0];
+          //@log state `bytes state`i++
+          i++;
+        } else if (state.length == 0 || proof[i++] != state[0]) {
+          throw;
+        } else {
+          state = __slice(state, 1, uint8(state.length)); // shift
+        }
       }
-      dataIndex += atomBytes[proof[i]];
-      parent = child;
+
     }
+      //@log newstate `string string(state)`
+
     // TODO - simplify
     // if(state != byte("$") || accepted[state]) throw; // if word is not in a final state
   }
@@ -214,7 +253,7 @@ contract Org is TypeDef {
         state = __concat(newstate, __slice(state, 1, uint8(state.length))); // reduce
       } else { // terminal
         //@log lookahead is terminal -> shift
-        i++;
+        if(proof[i++] != state[0]) return false;
         state = __slice(state, 1, uint8(state.length)); // shift
       }
       //@log newstate `string string(state)`

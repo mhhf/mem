@@ -13,19 +13,19 @@ contract OrgProposeTester is Test, LangDefinitions, CandidateDefinitions {
   function testSimplePropose() {
     Org org = new Org(l_001);
     org.propose(bytes32(""), "1101","aaaa");
-    // org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    // org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    // org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
   }
 
-  // function testParallelKernel() {
-  //   Org org = new Org(l_004);
-  //   org.propose(bytes32(""), "0","pAa");
-  //   org.propose(bytes32(""), "1","pAa");
-  //   org.propose(bytes32(""), "01","pAaa");
-  //   org.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
-  //   org.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
-  //   org.propose(bytes32(""), "00000000000000000000000000000042","c");
-  // }
+  function testParallelKernel() {
+    Org org = new Org(l_004);
+    org.propose(bytes32(""), "A0","pa$");
+    org.propose(bytes32(""), "A1","pa$");
+    org.propose(bytes32(""), "A01","paa$");
+    org.propose(bytes32(""), "Baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pb$");
+    org.propose(bytes32(""), "Baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pbb$");
+    org.propose(bytes32(""), "00000000000000000000000000000042","c$");
+  }
 
 }

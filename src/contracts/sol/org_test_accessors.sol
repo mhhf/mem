@@ -4,16 +4,37 @@ import "dapple/test.sol";
 import "dapple/reporter.sol";
 import "org.sol";
 
-contract OrgAccessorTester is Test, Reporter, LangDefinitions, CandidateDefinitions {
+contract OrgAccessorTester is Test, Reporter, LangDefinitions {
 
   Org org;
+  Org org2;
   function setUp() {
     org = new Org(l_001);
-    org.propose(bytes32(byte(0x01)), "1101", "aaaa");
-    org.propose(bytes32(byte(0x01)), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab");
-    org.propose(bytes32(byte(0x01)), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab");
-    org.propose(bytes32(byte(0x01)), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "b");
-    setupReporter('doc/report.md');
+    org.propose(bytes32(""), "1101", "aaaa$");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab$");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ab$");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "b$");
+
+    org2 = new Org(l_004);
+    org2.propose(bytes32(""), "0","pqa$");
+    org2.propose(bytes32(""), "1","pqa$");
+    org2.propose(bytes32(""), "01","pqaa$");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prb$");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prbb");
+    org2.propose(bytes32(""), "00000000000000000000000000000042","c");
+    // setupReporter('doc/report.md');
+  }
+
+  function testCandidateAccessors() {
+    org2 = new Org(l_004);
+    org2.propose(bytes32(""), "0","pqa$");
+    assertTrue(org.getChildId("1101","aaaa$")[0] == byte(0x01));
+    assertTrue(org.getChildId("1","a")[0] == byte(0xb7));
+    assertTrue(org.getChildId("11","aa")[0] == byte(0x3d));
+    assertTrue(org2.getChildId("","p")[0] == byte(0xa6));
+    assertTrue(org2.getChildId("","pq")[0] == byte(0x3f));
+    assertTrue(org2.getChildId("0","pqa")[0] == byte(0xdb));
+    // assertTrue(org2.getChildId("0","pqa$")[0] == byte(0xdb));
   }
 
   // function testGetNumChildren() {

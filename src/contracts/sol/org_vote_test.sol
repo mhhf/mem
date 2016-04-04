@@ -15,23 +15,23 @@ contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
   bytes32 c_1;
   function setUp() {
     org = new Org(l_001);
-    org.propose(bytes32(""), "1101","aaaa");
-    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
-    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
+    org.propose(bytes32(""), "1101","aaaa$");
+    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
+    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b$");
 
     org2 = new Org(l_004);
-    org2.propose(bytes32(""), "0","pAa");
-    org2.propose(bytes32(""), "1","pAa");
-    org2.propose(bytes32(""), "01","pAaa");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
+    org2.propose(bytes32(""), "0","pqa$");
+    org2.propose(bytes32(""), "1","pqa$");
+    org2.propose(bytes32(""), "01","pqaa$");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prb$");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prbb");
     org2.propose(bytes32(""), "00000000000000000000000000000042","c");
 
     c_1101$ = org.getChildId("1101","aaaa$");
     c_0a$ = org.getChildId("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
-    c_1 = org.getChildId("1","a");
-    c_1a = org.getChildId("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab");
+    c_1 = org.getChildId("1","a$");
+    c_1a = org.getChildId("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
     // setupReporter('doc/report.md');
   }
 
@@ -71,7 +71,7 @@ contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
   }
 
   function testSimpleParrallelVoting() {
-    org2.vote(org.getChildId("01","pAaa"), 200 );
+    org2.vote(org.getChildId("01","pqaa$"), 200 );
     bytes memory consensus = _constructConsensus(org2, "");
     //@log consensus `bytes consensus`
   }
