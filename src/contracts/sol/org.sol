@@ -75,22 +75,6 @@ contract Org is TypeDef {
   // i%3=1 is terminal
   // i%3=2 is next rule
   function Org(bytes grammar) {
-    // grammar has to be in right linear form
-    // if( grammar.length % 3 != 0 )
-    //   throw;
-
-    // setup entry points
-    // entryPoints = _entryPoints;
-    // for (var j = 0; j < entryPoints.length; j++) {
-    //   Node node = nodes[bytes32(entryPoints[j])];
-    //   node._state = entryPoints[j];
-    //   node._entry = true;
-    //   node._id = bytes32(entryPoints[j]);
-    //   //@log created `bytes32 node._id`
-    // }
-
-    // bytes memory startstate = new bytes(1);
-    // startstate[0] = "S$"
     // setup start node
     Node node = nodes[""];
     node._state = "S$";
@@ -115,18 +99,7 @@ contract Org is TypeDef {
       }
       bytes memory rule = __slice(grammar, i + 1, i + length);
       if (grammar[i+1] == byte("p")) { // parallel Kernel
-        ////@log `byte grammar[i]` `byte grammar[i + 1]` -> `byte internalRule`
         R[grammar[i]][grammar[i + 1]] = __toBytes(byte("p"));
-        // R[grammar[i]][grammar[i + 1]] = __concat(__toBytes(byte("p")), __toBytes(byte(internalRule)));
-        // for (var j = 1; j < rule.length; j++) {
-        //   // TODO -test for collision of types
-        //   bytes memory nr = __concat(__toBytes(byte(parallelityContext)), __toBytes(rule[j]));
-        //   //@log nr `bytes nr`
-        //   R[byte(internalRule)][byte(parallelityContext++)] = nr;
-        // }
-        // parallelityContext = 0x71;
-        // TODO - test overflow
-        internalRule++;
       } else {
         R[grammar[i]][grammar[i + 1]] = rule;
       }
@@ -260,12 +233,6 @@ contract Org is TypeDef {
     }
     //@log endstate `bytes state`
     return i == proof.length;
-    // return (
-    //   state.length == 0
-    //     || (state.length == 1
-    //         && (state[0] == byte("$")
-    //            || accepted[state[0]])
-    //        ));
   }
 
   function getConsens(bytes32 _nodeId) returns(bytes32 _consens) {
@@ -283,11 +250,6 @@ contract Org is TypeDef {
   function getCandidatePerformance(bytes32 candidate) returns(uint performance) {
     // TODO - check if candidate is in Trie
 
-    // var (delegations, votes) = _inheritBasis (candidate);
-    // Node best = _getBestChild(nodes[candidate]);
-    // return _getBestChildPerformance( delegations, votes, nodes[candidate] );
-
-    //
     // BUILD DELIGATION SET
     uint8 i;
     var (delegations, votes) = _inheritBasis(candidate);
@@ -301,21 +263,6 @@ contract Org is TypeDef {
     }
     return performance;
   }
-
-  // function getNewConsens() returns( byte[32] consens ) {
-  //   var (os, perf, cs, ci) = _computePerformance( start );
-  //   return cs;
-  // }
-  // function _getConsens(Node storage os) internal returns(byte[32] consens ) {
-  //   // compute the best performing option in the opton set
-  //   // each option
-  //   for ( var i=0; i<os.os.length; i++ ) {
-  //     Option current = os.o[os.os[i]];
-  //     uint performance = 0;
-  //     for( var j=0; j<owners.length; j++ ) {
-  //     }
-  //   }
-  // }
 
   // TODO - to fucking expensive - play with ways to optimize this
   function vote(bytes32 candidate, uint vote) returns(bool success) {
@@ -441,122 +388,6 @@ contract Org is TypeDef {
     return _performance;
   }
 
-  // function vote(bytes candidate, uint vote) returns(bool success) {
-  //   //@info --- VOTING
-  //   if( !isValide(candidate) ) throw;
-  //   if( vote > 1000 ) throw;
-  //
-  //   // Grab the option set
-  //   // update the users votes
-  //   // compute the performance
-  //   // propagate performance to the root
-  //   Node child = nodes[candidate];
-  //   bool increase = vote > child.votes[ownerId[msg.sender]];
-  //   uint update;
-  //   if( increase ) {
-  //     update = vote - child.votes[ownerId[msg.sender]];
-  //   } else {
-  //     update = child.votes[ownerId[msg.sender]] - vote;
-  //   }
-  //   child.votes[ownerId[msg.sender]] = vote;
-  //   child.performance += update;
-  //   //@debug updating child `bytes child._id`: `uint update`
-  //
-  //   for(var i = 0; i < candidate.length; i++) {
-  //     // 1. child was top performer
-  //     // 1.1 child increased
-  //     //  => update parent p.p += update
-  //     // 1.2 child decreased
-  //     //   ? check if other child has become top (c'.p > )
-  //     // 1.2.1 yes => make other child to top
-  //     // 1.2.2 no  => update parent p.p += update
-  //     // 2. child was not top
-  //     // 2.1 child increased
-  //     //   ? check if child become top: c.p > p.p?
-  //     // 2.1.1 yes => inherit performance from parent p.p = c.p
-  //     // 2.1.2 no  => stop
-  //     // 2.2 child decreased => stop
-  //
-  //     Node parent = nodes[child._parent];
-  //     if( parent._best_child == child._type ) { // child was top performer
-  //       if( increase ) { // 1.1 child increased
-  //         //  => update parent p.p += update
-  //         parent.performance += update;
-  //       } else { // 1.2 child decreased
-  //         //   ? check if other child has become top
-  //         Node storage best = _findBestPerformingChild(parent);
-  //         if( best._type == child._type ) { // 1.2.2 no
-  //           // update parent p.p += update
-  //           parent.performance -= update;
-  //         } else { // 1.2.1 yes
-  //           // make other child to top
-  //           parent.performance = best.performance;
-  //           parent._best_child = best._type;
-  //         }
-  //       }
-  //     } else { // child was not top performer
-  //       if( increase ) { // 2.1 child increased
-  //         if( child.performance > parent.performance ) { // check if child become top: c.p > p.p?
-  //           // 2.1.1 yes => inherit from child p.p = c.p
-  //           parent.performance = child.performance;
-  //           parent._best_child = child._type;
-  //         } else { // 2.1.2 no  => stop
-  //           break;
-  //         }
-  //       } else { // 2.2 child decreased
-  //         // stop
-  //         break;
-  //       }
-  //     }
-  //     child = parent;
-  //     // TODO (1.1, 1.2.1, 1.2.2, 2.1.1) write tests
-  //   }
-  //   //@log stop at `bytes parent._id`, performance is `uint parent.performance`
-  //   // TODO save consens
-  // }
-
-
-  // QUESTION - does this eaven make sence? suppose a really big scenario
-  // here one cannot compute everything in the gas limit
-  // function _computePerformance( Node storage os ) internal returns(
-  //   Node storage bestChild,
-  //   uint performance,
-  //   byte[32] cs,
-  //   uint ci
-  // ) {
-  //   performance = 0;
-  //   byte[32] memory _cs;
-  //   uint _ci = 0;
-  //   uint i;
-  //   if( os._type != byte("$") ) { //if the Node has children
-  //     uint maxPerformance;
-  //     // search for the child with the best performance
-  //     for (i =0; i<os.children.length; i++) {
-  //       Node c = os.optionFor[os.children[i]];
-  //       (,,cs, ci) = _computePerformance (c);
-  //       if (c.maxPerformance > maxPerformance ||i == 0) {
-  //         bestChild = c;
-  //         maxPerformance = c.maxPerformance;
-  //         _cs = cs;
-  //         _ci = ci;
-  //       }
-  //     }
-  //     _cs[_ci] = os._type;
-  //     _ci++;
-  //   } else {
-  //     for (i=0; i<owners.length; i++) {
-  //       // TODO - watch for overflow
-  //       performance += shares[owners[i]]*os.votes[owners[i]];
-  //     }
-  //     bestChild = os;
-  //   }
-  //   // EXPENSIVE - maybe export to something different?!
-  //   if( os.maxPerformance != performance ) {
-  //     os.maxPerformance = performance;
-  //   }
-  //   return (bestChild, performance, _cs, _ci);
-  // }
-
   function getType(bytes32 _id) returns(byte _type) {
     return nodes[_id]._type;
   }
@@ -680,16 +511,6 @@ contract Org is TypeDef {
     return _id;
   }
 
-  // function _findBestPerformingChild( Node _node ) internal returns(Node storage best) {
-  //   uint performance= 0;
-  //   for (var j=0; j<_node._children.length; j++) {
-  //     if(performance < nodes[_node._children[j]].performance) {
-  //       performance = nodes[_node._children[j]].performance;
-  //       best = nodes[_node._children[j]];
-  //     }
-  //   }
-  //   return best;
-  // }
 
 
   // UTILS
