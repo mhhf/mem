@@ -1,5 +1,6 @@
 import "dapple/debug.sol";
 import "dapple/test.sol";
+import "type_def.sol";
 
 
 
@@ -7,7 +8,7 @@ import "dapple/test.sol";
 // THIS IS A PROOF  OF CONCEPT
 // CURRENTLY THERE ARE LIMITS ON:
 // OWNERSHIP SET: max 32 owners allowed
-contract Org is Test {
+contract Org is TypeDef {
 
   // Atomic Terminals
   // 0x61 - bool
@@ -47,11 +48,8 @@ contract Org is Test {
     uint[32] votes;
   }
 
-  // Set of possible types
-  mapping (byte => uint8) atomBytes;
-
   // notes in the trie
-  ///@dev bytes32 - nodeId's: 
+  ///@dev bytes32 - nodeId's:
   // sha3(__concat(parent._id, __concat(proofSlice, dataSlice)))
   mapping (bytes32 => Node) nodes;
 
@@ -92,7 +90,7 @@ contract Org is Test {
     // }
 
     bytes memory startstate = new bytes(1);
-    startstate[0] = byte("S");
+    startstate[0] = byte("S$");
     // setup start node
     Node node = nodes[""];
     node._state = startstate;
@@ -114,10 +112,10 @@ contract Org is Test {
       if( grammar[i+1] == byte("$") ) { // end
         accepted[grammar[i]] = true;
       }
-      bytes memory rule = __slice(grammar, i + 2, i + length);
-      if( grammar[i+1] == byte("p") ) { // parallel Kernel
+      bytes memory rule = __slice(grammar, i + 1, i + length);
+      if (grammar[i+1] == byte("p")) { // parallel Kernel
         R[grammar[i]][grammar[i + 1]] = __toBytes(internalRule);
-        for (var j=0; j<rule.length; j++) {
+        for (var j = 1; j < rule.length; j++) {
           // TODO -test for collision of types
           R[byte(internalRule)][rule[j]] = __toBytes(rule[j]);
         }
@@ -128,12 +126,6 @@ contract Org is Test {
       }
       i += length;
     }
-
-    atomBytes[byte(0x61)] = 1;  // bool
-    atomBytes[byte(0x62)] = 32; // bytes256
-    atomBytes[byte(0x63)] = 32; // uint256
-    atomBytes[byte(0x70)] = 0;  // parallel voting type
-    atomBytes[byte("$")] = 0;  // bottom ($)
   }
 
   function send(address to, uint value) {
@@ -174,7 +166,7 @@ contract Org is Test {
     for (var i=0; i<proof.length; i++) {
       bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
       // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
-      bytes memory proofSlice = __slice(proof, 0, i+1);
+      bytes memory proofSlice = __slice(proof, 0, i + 1);
       bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
       //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
       Node storage child = nodes[_id];
@@ -204,26 +196,37 @@ contract Org is Test {
   // TODO rewrite validation - simplify
   function isValide(bytes proof) returns (bool) {
     // init with start state
-    bytes memory state = new bytes(1);
-    state[0] = byte("S");
+    bytes memory state = "S$";
 
-    for (var i = 0; i < proof.length; i++) {
-      bytes memory nextstate = R[state[0]][proof[i]];
-      if(nextstate.length == 0) {
+    uint8 i = 0;
+    while(state.length > 0) {
+      //@log state `string string(state)`
+      if(state.length == 0) {
         return false;
-      } else if(nextstate.length == 1 && nextstate[0] == byte("$")) {
+      } else if(state[0] == byte("$")) {
+        return proof[i] == byte("$");
+      } else if (state.length == 1 && state[0] == byte(0x01) ) { // epsilon
         state = __slice(state, 1, uint8(state.length));
-      } else {
-        state = __concat(nextstate, __slice(state, 1, uint8(state.length)));
+      } else if (byte(0x41) <= state[0] && state[0] <= byte(0x5a)) { // nonterminal
+        //@log lookahead is nonterminal -> reduce
+        bytes memory newstate = R[state[0]][proof[i]];
+        if(newstate.length == 0) return false;
+        state = __concat(newstate, __slice(state, 1, uint8(state.length))); // reduce
+      } else { // terminal
+        //@log lookahead is terminal -> shift
+        i++;
+        state = __slice(state, 1, uint8(state.length)); // shift
       }
+      //@log newstate `string string(state)`
     }
     //@log endstate `bytes state`
-    return (
-      state.length == 0 
-        || (state.length == 1
-            && (state[0] == byte("$")
-               || accepted[state[0]])
-           ));
+    return i == proof.length;
+    // return (
+    //   state.length == 0
+    //     || (state.length == 1
+    //         && (state[0] == byte("$")
+    //            || accepted[state[0]])
+    //        ));
   }
 
   function getConsens(bytes32 _nodeId) returns(bytes32 _consens) {
@@ -515,16 +518,41 @@ contract Org is Test {
   //   return (bestChild, performance, _cs, _ci);
   // }
 
-
-  function getNumChildrenFor(bytes32 candidate) returns(uint node) {
-    return nodes[candidate]._children.length;
+  function getType(bytes32 _id) returns(byte _type) {
+    return nodes[_id]._type;
   }
 
-  ///@dev 
-  function getChildTypeAt(bytes32 candidate, uint8 i) returns(byte _type) {
+
+  function getNumChildrenFor(bytes32 _id) returns(uint8 _length) {
+    uint8 length = uint8(nodes[_id]._children.length);
+    return length;
+  }
+
+  function getChildData1(bytes32 _id) returns(byte data) {
+    return nodes[_id].data[0];
+  }
+
+  // function getChildDataLength(bytes32 _id) returns(uint length) {
+  //
+  // }
+
+  // retarded
+  function getChildData32(bytes32 _id) returns(byte[32] memory _return) {
+    uint8 _length = uint8(nodes[_id].data.length);
+    if(_length > 32) _length = 32;
+    for(uint8 i = 0; i < _length; i++) {
+      _return[i] = nodes[_id].data[i];
+    }
+  }
+
+  function getChildIdAt(bytes32 _id, uint8 i) returns (bytes32 id) {
+    return nodes[_id]._children[i];
+  }
+
+  function getChildTypeAt(bytes32 _id, uint8 i) returns(byte _type) {
 
     // get the node
-    Node node = nodes[candidate];
+    Node node = nodes[_id];
 
     // get node child
     bytes32 child = node._children[i];
@@ -533,9 +561,15 @@ contract Org is Test {
     return nodes[child]._type;
   }
 
-  function getBestChildIndex(bytes32 candidate) returns(uint8 index){
-    return nodes[candidate]._best_child;
+  function getBestChildIndex(bytes32 _id) returns(uint8 index){
+    return nodes[_id]._best_child;
   }
+
+  function getBestChildId(bytes32 _id) returns(bytes32 id) {
+    Node n = nodes[_id];
+    return n._children[n._best_child];
+  }
+
 
 
 
@@ -604,7 +638,6 @@ contract Org is Test {
       _id = sha3(__concat(_id, __concat(proofSlice, dataSlice)));
       dataIndex += atomBytes[proof[i]];
     }
-    //@debug child `bytes32 _id`
     return _id;
   }
 
@@ -637,25 +670,25 @@ contract Org is Test {
     return out;
   }
 
-  function __concat(bytes32 a, bytes b) internal returns(bytes c) {
+  function __concat(bytes32 a, bytes memory b) internal returns(bytes memory c) {
     c = new bytes(a.length+b.length);
     uint8 i;
-    for (i; i<a.length; i++) {
+    for (i = 0; i<a.length; i++) {
       c[i] = a[i];
     }
-    for (i; i<b.length; i++) {
+    for (i = 0; i<b.length; i++) {
       c[i + a.length] = b[i];
     }
     return c;
   }
 
-  function __concat(bytes a, bytes b) internal returns(bytes c) {
+  function __concat(bytes memory a, bytes memory b) internal returns(bytes memory c) {
     c = new bytes(a.length+b.length);
     uint8 i;
-    for (i; i<a.length; i++) {
+    for (i = 0; i<a.length; i++) {
       c[i] = a[i];
     }
-    for (i; i<b.length; i++) {
+    for (i = 0; i<b.length; i++) {
       c[i + a.length] = b[i];
     }
     return c;

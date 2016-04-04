@@ -3,8 +3,9 @@ import "cand_def.sol";
 import "dapple/test.sol";
 import "dapple/reporter.sol";
 import "org.sol";
+import "type_def.sol";
 
-contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions {
+contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
 
   Org org;
   Org org2;
@@ -20,12 +21,12 @@ contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions {
     org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b");
 
     org2 = new Org(l_004);
-    // org2.propose(bytes32(""), "0","pAa");
-    // org2.propose(bytes32(""), "1","pAa");
-    // org2.propose(bytes32(""), "01","pAaa");
-    // org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
-    // org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
-    // org2.propose(bytes32(""), "00000000000000000000000000000042","c");
+    org2.propose(bytes32(""), "0","pAa");
+    org2.propose(bytes32(""), "1","pAa");
+    org2.propose(bytes32(""), "01","pAaa");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
+    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
+    org2.propose(bytes32(""), "00000000000000000000000000000042","c");
 
     c_1101$ = org.getChildId("1101","aaaa$");
     c_0a$ = org.getChildId("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
@@ -54,20 +55,26 @@ contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions {
   //   assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
   // }
 
-  function testSimpleGetParallelConsensus() {
-    org2.propose(bytes32(""), "0","pAa");
-    org2.propose(bytes32(""), "1","pAa");
-    org2.propose(bytes32(""), "01","pAaa");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
-    org2.propose(bytes32(""), "00000000000000000000000000000042","c");
-    org2.getConsens(bytes32(""));
+  // function testSimpleGetParallelConsensus() {
+  //   org2.propose(bytes32(""), "0","pAa");
+  //   org2.propose(bytes32(""), "1","pAa");
+  //   org2.propose(bytes32(""), "01","pAaa");
+  //   org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
+  //   org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
+  //   org2.propose(bytes32(""), "00000000000000000000000000000042","c");
+  //   org2.getConsens(bytes32(""));
+  // }
+
+  function testSimpleConsensusConstruction() {
+    bytes memory consensus = _constructConsensus(org, "");
+    //@log consensus `bytes consensus`
   }
 
   function testSimpleParrallelVoting() {
-    // org2.vote(org.getChildId("0","pAa"), 200 );
+    org2.vote(org.getChildId("01","pAaa"), 200 );
+    bytes memory consensus = _constructConsensus(org2, "");
+    //@log consensus `bytes consensus`
   }
-
 
   function __consensEq(bytes32 a, bytes32 bs) internal returns(bool success){
     success = true;
@@ -79,5 +86,44 @@ contract OrgVoteDelegationTester is Test, Reporter, LangDefinitions {
     }
   }
 
+  function _constructConsensus(Org o, bytes32 _id) internal returns (bytes memory _ret){
+    byte _type = o.getType(_id);
+    uint8 i;
+    if (_type == byte("p")) {
+      bytes memory tmp = _constructConsensus(o, o.getChildIdAt(_id, 0));
+      for(i = 1; i < o.getNumChildrenFor(_id); i++) {
+        _ret = __concat(tmp, _constructConsensus(o, o.getChildIdAt(_id, i)));
+      }
+      return _ret;
+    } else if(_type == byte("$")) { // 0 byte -> return
+      return "";
+    } else if(_type == byte("a")) { // 1 byte
+      byte _byte = o.getChildData1(_id);
+      bytes memory bytedata = new bytes(1);
+      bytedata[0] = _byte;
+      _ret = __concat(bytedata, _constructConsensus(o, o.getBestChildId(_id)));
+      return _ret;
+    } else { //32 bytes
+      byte[32] memory _data = o.getChildData32(_id);
+      bytes memory data = new bytes(atomBytes[_type]);
+      for(i = 0; i < atomBytes[_type]; i++) {
+        data[i] = _data[i];
+      }
+      _ret = __concat(data, _constructConsensus(o, o.getBestChildId(_id)));
+      return _ret;
+    }
+  }
+
+  function __concat(bytes a, bytes b) internal returns(bytes memory c) {
+    c = new bytes(a.length+b.length);
+    uint8 i;
+    for (i = 0; i<a.length; i++) {
+      c[i] = a[i];
+    }
+    for (i = 0; i<b.length; i++) {
+      c[i + a.length] = b[i];
+    }
+    return c;
+  }
 
 }

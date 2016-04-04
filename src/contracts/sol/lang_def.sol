@@ -4,6 +4,7 @@ contract LangDefinitions {
   bytes l_002; // a*b*
   bytes l_003; // a+b*
   bytes l_004; // a+b*
+  bytes l_005; // a+b*
 
   function LangDefinitions() {
     // S -> aS
@@ -40,12 +41,12 @@ contract LangDefinitions {
     l_002[4] = byte(0x03);
     l_002[5] = byte("S");
     l_002[6] = byte("b");
-    l_002[7] = byte(0x02);
+    l_002[7] = byte("A");
     // B -> bB
     l_002[8] = byte(0x03);
-    l_002[9] = byte(0x02);
+    l_002[9] = byte("A");
     l_002[10] = byte("b");
-    l_002[11] = byte(0x02);
+    l_002[11] = byte("A");
     // final(S)
     l_002[12] = byte(0x03);
     l_002[13] = byte("S");
@@ -53,7 +54,7 @@ contract LangDefinitions {
     l_002[15] = byte("$");
     // final(B)
     l_002[16] = byte(0x03);
-    l_002[17] = byte(0x02);
+    l_002[17] = byte("A");
     l_002[18] = byte("$");
     l_002[19] = byte("$");
 
@@ -67,30 +68,30 @@ contract LangDefinitions {
     l_003[0] = byte(0x03);
     l_003[1] = byte("S");
     l_003[2] = byte("a");
-    l_003[3] = byte(0x02);
+    l_003[3] = byte("A");
     // A -> aA
     l_003[4] = byte(0x03);
-    l_003[5] = byte(0x02);
+    l_003[5] = byte("A");
     l_003[6] = byte("a");
-    l_003[7] = byte(0x02);
+    l_003[7] = byte("A");
     // A -> bB
     l_003[8] = byte(0x03);
-    l_003[9] = byte(0x02);
+    l_003[9] = byte("A");
     l_003[10] = byte("b");
-    l_003[11] = byte(0x03);
+    l_003[11] = byte("B");
     // B -> bB
     l_003[12] = byte(0x03);
-    l_003[13] = byte(0x03);
+    l_003[13] = byte("B");
     l_003[14] = byte("b");
-    l_003[15] = byte(0x03);
+    l_003[15] = byte("B");
     // final(A)
     l_003[16] = byte(0x03);
-    l_003[17] = byte(0x02);
+    l_003[17] = byte("A");
     l_003[18] = byte("$");
     l_003[19] = byte("$");
     // final(B)
     l_003[20] = byte(0x03);
-    l_003[21] = byte(0x03);
+    l_003[21] = byte("B");
     l_003[22] = byte("$");
     l_003[23] = byte("$");
 
@@ -131,6 +132,20 @@ contract LangDefinitions {
     l_004[26] = byte("B");
     l_004[27] = byte("$");
     l_004[28] = byte("$");
+
+    l_005 = new bytes(10);
+    // A -> (AbA)
+    l_005[0] = byte(0x06);
+    l_005[1] = byte("S");
+    l_005[2] = byte("(");
+    l_005[3] = byte("S");
+    l_005[4] = byte("b");
+    l_005[5] = byte("S");
+    l_005[6] = byte(")");
+    // A -> a
+    l_005[7] = byte(0x02);
+    l_005[8] = byte("S");
+    l_005[9] = byte("a");
 
   }
 

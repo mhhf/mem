@@ -4,15 +4,15 @@ import "lang_def.sol";
 import "cand_def.sol";
 
 // TODO - test metalinearity
-contract LangTester is Test, LangDefinitions, CandidateDefinitions {
+contract LangTester is Test, LangDefinitions {
 
   // Language tests
   // 001 - (a|b)*
   // 002 - a*b*
   // 003 - a+b*
-
-  function setUp () {
-  }
+  //
+  // function setUp () {
+  // }
 
   function testOrgCreation() {
     Org org = new Org(l_001);
@@ -21,21 +21,16 @@ contract LangTester is Test, LangDefinitions, CandidateDefinitions {
   // test start rule is final
   function testStartRuleIsFinal() {
     Org org = new Org(l_001);
-    assertTrue(org.isValide(""));
-    assertTrue(org.isValide("a"));
-    assertTrue(org.isValide("b"));
-    assertTrue(org.isValide("abab"));
+    assertTrue(org.isValide("$"));
+    assertTrue(org.isValide("a$"));
+    assertTrue(org.isValide("b$"));
+    assertTrue(org.isValide("abab$"));
     Org org2 = new Org(l_002);
-    assertTrue(org2.isValide(""));
-    assertTrue(org2.isValide("a"));
-    assertTrue(org2.isValide("b"));
-    assertTrue(org2.isValide("aaabb"));
+    assertTrue(org2.isValide("$"));
+    assertTrue(org2.isValide("a$"));
+    assertTrue(org2.isValide("b$"));
+    assertTrue(org2.isValide("aaabb$"));
   }
-
-  function renderCandidates() {
-    
-  }
-
 
   // function testCandidatesWithEndMark() {
   //   Org org = new Org(l_001);
@@ -47,15 +42,20 @@ contract LangTester is Test, LangDefinitions, CandidateDefinitions {
   // test start rule is not final
   function testStartRuleIsNotFinal() {
     Org org = new Org(l_003);
-    assertTrue(org.isValide("a"));
-    assertTrue(org.isValide("aab"));
-    assertFalse(org.isValide("b"));
-    assertFalse(org.isValide(""));
-    assertFalse(org.isValide("ac"));
+    assertTrue(org.isValide("a$"));
+    assertTrue(org.isValide("aab$"));
+    assertFalse(org.isValide("b$"));
+    assertFalse(org.isValide("$"));
+    assertFalse(org.isValide("ac$"));
   }
 
   function testParallelity() {
     Org org = new Org(l_004);
+  }
+
+  function testDeployCfg() logs_gas {
+    Org org = new Org(l_005);
+    assertTrue(org.isValide("(aba)$"));
   }
 
 }
