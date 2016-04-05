@@ -199,7 +199,7 @@ contract Org is TypeDef {
       }
 
     }
-      //@log newstate `string string(state)`
+    //@log newstate `string string(state)`
 
     // TODO - simplify
     // if(state != byte("$") || accepted[state]) throw; // if word is not in a final state
@@ -504,7 +504,7 @@ contract Org is TypeDef {
     uint8 dataIndex = 0;
     for(var i = 0; i < proof.length; i++) {
       bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
-      bytes memory proofSlice = __slice(proof, 0, i+1);
+      bytes memory proofSlice = __slice(proof, 0, i + 1);
       _id = sha3(__concat(_id, __concat(proofSlice, dataSlice)));
       dataIndex += atomBytes[proof[i]];
     }

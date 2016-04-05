@@ -20,34 +20,32 @@ var app = docopt.docopt(cli, {
   version: __package.version
 });
 
-var config = CONFIG( app, { 
+var config = CONFIG( app, {
   cli: true
 });
 
 
 if( config.is ) {
-  
-  
+
   var org = config.contracts.org();
   var _orga = config['<name>'];
-  
+
   org.getConsens.call( _orga ).then( schemaIpfs => {
-    
+
     var schema = config.ipfs().catJsonSync( schemaIpfs );
-    
+
     var file = fs.readFileSync( app['<path>'], 'utf8' );
     var json = jsonlint.parse( file );
-    
+
     var valid = tv4.validate( json, schema );
-    
+
     if( !valid ) {
       console.log( 'no :( '.red.bold, tv4.error.message );
     } else {
       console.log('indeed it is!'.green.bold);
     }
-    
+
   });
-  
 
 } else if( config.chain ) {
   
