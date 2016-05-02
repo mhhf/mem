@@ -1,7 +1,127 @@
-import "dapple/debug.sol";
-import "dapple/test.sol";
 import "type_def.sol";
 
+library LL1 {
+
+  struct ParseTable {
+    mapping (byte => mapping (byte => bytes)) R;
+    mapping (byte => bool) accepted; // accepted rules
+    mapping (byte => uint8) terminalMap; // maps terminal types to their data length
+  }
+
+  function setup(ParseTable storage table, bytes grammar) {
+    uint8 i = 0;
+    while (i < grammar.length) {
+      uint8 length = uint8(grammar[i++]);
+      if( grammar[i+1] == byte("$") ) { // end
+        table.accepted[grammar[i]] = true;
+      }
+      bytes memory rule = __slice(grammar, i + 1, i + length);
+      if (grammar[i+1] == byte("p")) { // parallel Kernel
+        bytes memory r = __concat(__toBytes(byte("p")), __concat(__toBytes(byte(rule.length - 1)), __slice(rule, 1, uint8(rule.length))));
+        table.R[grammar[i]][grammar[i + 1]] = r;
+        // R[grammar[i]][grammar[i + 1]] = __toBytes(byte("p"));
+      } else {
+        table.R[grammar[i]][grammar[i + 1]] = rule;
+      }
+      i += length;
+    }
+
+    table.terminalMap[byte("a")] = 1;
+    table.terminalMap[byte("b")] = 32;
+    table.terminalMap[byte("c")] = 32;
+    table.terminalMap[byte("p")] = 1;
+    table.terminalMap[byte("$")] = 0;
+  }
+
+  function isValide(ParseTable storage table, bytes proof) returns (bool) {
+    // init with start state
+    bytes memory state = "S$";
+
+    uint8 i = 0;
+
+    // while (state.length > 0) {
+      (state, i) = step(table, state, proof, i);
+      if(state[0] == byte('$')) return proof[i] == byte('$');
+    // }
+    return i > 0;
+    return i == proof.length;
+  }
+
+  function step(ParseTable storage table, bytes memory _state, bytes proof, uint8 _ptr)
+    internal
+    returns (bytes memory state, uint8 ptr) {
+      //@log omg
+
+      if (byte(0x41) <= _state[0] && _state[0] <= byte(0x5a)) { // nonterminal
+        bytes memory newstate = table.R[_state[0]][proof[_ptr]];
+        if(newstate.length == 0) throw;
+        state = __concat(newstate, __slice(_state, 1, uint8(_state.length))); // reduce
+      } else { // terminal
+        if(proof[_ptr] != _state[0]) {
+          throw;
+        } else if (proof[_ptr] == byte("p")) {
+          if(uint8(proof[_ptr+1]) - 0x30 > uint8(state[1])) throw;
+          state = __concat(__toBytes(_state[uint8(proof[_ptr+1]) - 0x30 + 2]), __slice(_state, 2 + uint8(_state[1]), uint8(_state.length)));
+        } else {
+          state = __slice(_state, 1, uint8(_state.length)); // shift
+        }
+        ptr = _ptr + 1 + table.terminalMap[proof[_ptr]];
+      }
+
+      if(state.length == 0) {
+        throw;
+      }
+
+      return (state, ptr);
+  }
+
+  function __slice(bytes _in, uint8 from, uint8 to) internal returns(bytes out) {
+    out = new bytes(to-from);
+    for(var i=0; i< to-from; i++) {
+      out[i] = _in[from+i];
+    }
+    return out;
+  }
+
+  function __extend(bytes fst, uint extend) internal returns(bytes out) {
+    out = new bytes(fst.length + extend);
+    for(var i=0; i < fst.length; i++) {
+      out[i] = fst[i];
+    }
+    return out;
+  }
+
+  function __concat32(bytes32 a, bytes memory b) internal returns(bytes memory c) {
+    c = new bytes(a.length+b.length);
+    uint8 i;
+    for (i = 0; i<a.length; i++) {
+      c[i] = a[i];
+    }
+    for (i = 0; i<b.length; i++) {
+      c[i + a.length] = b[i];
+    }
+    return c;
+  }
+
+  function __concat(bytes memory a, bytes memory b) internal returns(bytes memory c) {
+    c = new bytes(a.length+b.length);
+    uint8 i;
+    for (i = 0; i<a.length; i++) {
+      c[i] = a[i];
+    }
+    for (i = 0; i<b.length; i++) {
+      c[i + a.length] = b[i];
+    }
+    return c;
+  }
+
+  function __toBytes(byte what) internal returns (bytes) {
+    bytes memory ret = new bytes(1);
+    ret[0] = what;
+    return ret;
+  }
+
+}
 
 
 
@@ -99,7 +219,9 @@ contract Org is TypeDef {
       }
       bytes memory rule = __slice(grammar, i + 1, i + length);
       if (grammar[i+1] == byte("p")) { // parallel Kernel
-        R[grammar[i]][grammar[i + 1]] = __toBytes(byte("p"));
+        bytes memory r = __concat(__toBytes(byte("p")), __concat(__toBytes(byte(rule.length - 1)), __slice(rule, 1, uint8(rule.length))));
+        R[grammar[i]][grammar[i + 1]] = r;
+        // R[grammar[i]][grammar[i + 1]] = __toBytes(byte("p"));
       } else {
         R[grammar[i]][grammar[i + 1]] = rule;
       }
@@ -119,11 +241,8 @@ contract Org is TypeDef {
     }
   }
 
-  // TODO propose happenes always on a start rule/ entry point
   // TODO - test if data has valide length
-  function propose(bytes32 _nodeId, bytes data, bytes _proof) {
-    // assert atoicity
-    // if( !isValide(byte("S"), _proof) ) throw;
+  function propose(bytes32 _nodeId, bytes _proof) {
 
     // only the submision of complete words is allowed.
     // here we exend the proof candidate with an end of line symbol
@@ -157,10 +276,9 @@ contract Org is TypeDef {
       } else { // terminal
         //@log lookahead is terminal -> shift
 
-
-        bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
-        // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
         bytes memory proofSlice = __slice(proof, 0, i + 1);
+        bytes memory dataSlice = __slice(proof, i + 1, i + 1 + atomBytes[proof[i]]);
+        // bytes memory dataHistory = __slice(data, 0, dataIndex + atomBytes[proof[i]]);
         bytes32 _id = sha3(__concat(parent._id, __concat(proofSlice, dataSlice)));
         //@debug looking at `bytes proofSlice` with `bytes dataSlice` _id: `bytes32 _id`
         Node storage child = nodes[_id];
@@ -179,7 +297,7 @@ contract Org is TypeDef {
           child._state = state;
           parent._children.push (_id);
         }
-        dataIndex += atomBytes[proof[i]];
+        // dataIndex += atomBytes[proof[i]];
         parent = child;
         if (state[0] == byte("$")) {
           if (proof[i] != byte("$")) throw;
@@ -190,12 +308,12 @@ contract Org is TypeDef {
           //TODO -test if nonterminal is actually in rule
           state[0] = dataSlice[0];
           //@log state `bytes state`i++
-          i++;
-        } else if (state.length == 0 || proof[i++] != state[0]) {
+        } else if (state.length == 0 || proof[i] != state[0]) {
           throw;
         } else {
           state = __slice(state, 1, uint8(state.length)); // shift
         }
+        i += 1 + atomBytes[proof[i]];
       }
 
     }
@@ -212,7 +330,7 @@ contract Org is TypeDef {
 
     uint8 i = 0;
     while(state.length > 0) {
-      //@log state `string string(state)`
+      //@log state `bytes state`
       if(state.length == 0) {
         return false;
       } else if(state[0] == byte("$")) {
@@ -226,8 +344,21 @@ contract Org is TypeDef {
         state = __concat(newstate, __slice(state, 1, uint8(state.length))); // reduce
       } else { // terminal
         //@log lookahead is terminal -> shift
-        if(proof[i++] != state[0]) return false;
-        state = __slice(state, 1, uint8(state.length)); // shift
+        //@log proof i: `byte proof[i]`
+        //@log state 0: `byte state[0]`
+        if(proof[i] != state[0]) {
+          return false;
+        } else if (proof[i] == byte("p")) {
+          // TODO - index instead of Terminal
+          //@log p+1 `byte proof[i+1]`
+          //@log `uint8 uint8(proof[i+1])-0x30`
+          //@log `uint8 uint8(state[1])`
+          if(uint8(proof[i+1]) - 0x30 > uint8(state[1])) throw;
+          state = __concat(__toBytes(state[uint8(proof[i+1]) - 0x30 + 2]), __slice(state, 2 + uint8(state[1]), uint8(state.length)));
+        } else {
+          state = __slice(state, 1, uint8(state.length)); // shift
+        }
+        i += 1 + atomBytes[proof[i]];
       }
       //@log newstate `string string(state)`
     }
@@ -300,7 +431,9 @@ contract Org is TypeDef {
       performance = _getBestChildPerformance (delegations, votes, node);
       //@log performance of node `bytes32 node._id` is `uint performance`
       // if node is best child
-      if( nodes[parent._children[parent._best_child]]._type == node._type ) {
+      if(
+        __compareBytes32 (nodes[parent._children[parent._best_child]]._id[0], node._id[0])
+      ) {
         //@log node is best child
         uint8 bestIndex = parent._best_child;
         // check if still best child
@@ -328,7 +461,9 @@ contract Org is TypeDef {
           //@log node got new best child out of `uint parent._children.length` children
           // swptch parents best child to node
           for(i=0; i<parent._children.length; i++) {
-            if(nodes[parent._children[i]]._type == node._type) {
+            if(
+              __compareBytes32 (nodes[parent._children[i]]._id, node._id)
+            ) {
               //@log best child index is now `uint i`
               parent._best_child = i;
               break;
@@ -343,6 +478,7 @@ contract Org is TypeDef {
       parent = nodes[node._parent];
     }
   }
+
 
   function __correctBestChildRelationBottom(
     uint8[32] memory _delegations,
@@ -499,14 +635,14 @@ contract Org is TypeDef {
     return (delegations, votes);
   }
 
-  function getChildId(bytes data, bytes proof) returns (bytes32 _id){
+  function getChildId(bytes proof) returns (bytes32 _id){
     _id = bytes32("");
     uint8 dataIndex = 0;
     for(var i = 0; i < proof.length; i++) {
-      bytes memory dataSlice = __slice(data, dataIndex, dataIndex + atomBytes[proof[i]]);
       bytes memory proofSlice = __slice(proof, 0, i + 1);
+      bytes memory dataSlice = __slice(proof, i + 1, i + 1 + atomBytes[proof[i]]);
       _id = sha3(__concat(_id, __concat(proofSlice, dataSlice)));
-      dataIndex += atomBytes[proof[i]];
+      i += atomBytes[proof[i]];
     }
     return _id;
   }
@@ -564,5 +700,13 @@ contract Org is TypeDef {
     ret[0] = what;
     return ret;
   }
+
+  function __compareBytes32(bytes32 a, bytes32 b) internal returns (bool){
+    for (var i = 0; i < 32; i++) {
+      if(a[0] != b[0]) return false;
+    }
+    return true;
+  }
+
 
 }

@@ -5,6 +5,8 @@ contract LangDefinitions {
   bytes l_003; // a+b*
   bytes l_004; // a+b*
   bytes l_005; // a+b*
+  bytes l_006; // a+b*
+  bytes l_007; // a+b*
 
   function LangDefinitions() {
     // S -> aS
@@ -147,8 +149,81 @@ contract LangDefinitions {
     l_005[8] = byte("S");
     l_005[9] = byte("a");
 
-  }
+    l_006 = new bytes(29);
+    // S -> pAB
+    l_006[0] = byte(0x04);
+    l_006[1] = byte("S");
+    l_006[2] = byte("p");
+    l_006[3] = byte("A");
+    l_006[4] = byte("B");
+    // S -> cC
+    l_006[5] = byte(0x03);
+    l_006[6] = byte("S");
+    l_006[7] = byte("c");
+    l_006[8] = byte("C");
+    // final(c)
+    l_006[9] = byte(0x03);
+    l_006[10] = byte("C");
+    l_006[11] = byte("$");
+    l_006[12] = byte("$");
+    // A -> aA
+    l_006[13] = byte(0x03);
+    l_006[14] = byte("A");
+    l_006[15] = byte("a");
+    l_006[16] = byte("S");
+    // B -> bB
+    l_006[17] = byte(0x03);
+    l_006[18] = byte("B");
+    l_006[19] = byte("b");
+    l_006[20] = byte("B");
+    // final(A)
+    l_006[21] = byte(0x03);
+    l_006[22] = byte("A");
+    l_006[23] = byte("$");
+    l_006[24] = byte("$");
+    // final(B)
+    l_006[25] = byte(0x03);
+    l_006[26] = byte("B");
+    l_006[27] = byte("$");
+    l_006[28] = byte("$");
 
-  
+    l_007 = new bytes(29);
+    // S -> pAB
+    l_007[0] = byte(0x04);
+    l_007[1] = byte("S");
+    l_007[2] = byte("p");
+    l_007[3] = byte("A");
+    l_007[4] = byte("A");
+    // S -> cC
+    l_007[5] = byte(0x03);
+    l_007[6] = byte("S");
+    l_007[7] = byte("c");
+    l_007[8] = byte("C");
+    // final(c)
+    l_007[9] = byte(0x03);
+    l_007[10] = byte("C");
+    l_007[11] = byte("$");
+    l_007[12] = byte("$");
+    // A -> aA
+    l_007[13] = byte(0x03);
+    l_007[14] = byte("A");
+    l_007[15] = byte("a");
+    l_007[16] = byte("S");
+    // B -> bB
+    l_007[17] = byte(0x03);
+    l_007[18] = byte("B");
+    l_007[19] = byte("b");
+    l_007[20] = byte("B");
+    // final(A)
+    l_007[21] = byte(0x03);
+    l_007[22] = byte("A");
+    l_007[23] = byte("$");
+    l_007[24] = byte("$");
+    // final(B)
+    l_007[25] = byte(0x03);
+    l_007[26] = byte("B");
+    l_007[27] = byte("$");
+    l_007[28] = byte("$");
+  }
 
 }

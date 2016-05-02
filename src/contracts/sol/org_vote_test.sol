@@ -4,8 +4,9 @@ import "dapple/test.sol";
 import "dapple/reporter.sol";
 import "org.sol";
 import "type_def.sol";
+import "formatter.sol";
 
-contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
+contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions, OrgFormatter {
 
   Org org;
   Org org2;
@@ -15,55 +16,45 @@ contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
   bytes32 c_1;
   function setUp() {
     org = new Org(l_001);
-    org.propose(bytes32(""), "1101","aaaa$");
-    org.propose(bytes32(""), "0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
-    org.propose(bytes32(""), "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
-    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","b$");
+    org.propose(bytes32(""), "a1a1a0a1$");
+    org.propose(bytes32(""), "a0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$");
+    org.propose(bytes32(""), "a1baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$");
+    org.propose(bytes32(""), "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb$");
 
     org2 = new Org(l_004);
-    org2.propose(bytes32(""), "0","pqa$");
-    org2.propose(bytes32(""), "1","pqa$");
-    org2.propose(bytes32(""), "01","pqaa$");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","prb$");
-    org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prbb");
-    org2.propose(bytes32(""), "00000000000000000000000000000042","c");
+    org2.propose(bytes32(""), "pAa0$");
+    org2.propose(bytes32(""), "pAa1$");
+    org2.propose(bytes32(""), "pAa0a1$");
+    org2.propose(bytes32(""), "pBbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$");
+    org2.propose(bytes32(""), "pBbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    org2.propose(bytes32(""), "c00000000000000000000000000000042");
 
-    c_1101$ = org.getChildId("1101","aaaa$");
-    c_0a$ = org.getChildId("0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
-    c_1 = org.getChildId("1","a$");
-    c_1a = org.getChildId("1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","ab$");
-    // setupReporter('doc/report.md');
+    c_1101$ = org.getChildId("a1a1a0a1$");
+    c_0a$ = org.getChildId("a0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$");
+    c_1 = org.getChildId("a1");
+    c_1a = org.getChildId("a1baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    // setupReporter('doc/vote.md');
   }
 
-  // function testCorrectlyInitiateFirstConsensCandidate() {
-  //   assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
-  // }
-  //
-  // function testCorrectlySwitchesToNewTestCandidate() {
-  //   org.vote(c_0a$, 100);
-  //   assertTrue(__consensEq(org.getConsens(bytes32("")), c_0a$));
-  // }
-  //
-  // function testCorrectlyVotesForMiddleCandidate() {
-  //   org.vote(c_1, 200);
-  //   assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
-  // }
-  //
-  // function testCorrectlyPropagatesVotesDownTheTree() {
-  //   org.vote(c_1a, 10);
-  //   org.vote(c_1, 200);
-  //   assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
-  // }
+  function testCorrectlyInitiateFirstConsensCandidate() {
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
+  }
 
-  // function testSimpleGetParallelConsensus() {
-  //   org2.propose(bytes32(""), "0","pAa");
-  //   org2.propose(bytes32(""), "1","pAa");
-  //   org2.propose(bytes32(""), "01","pAaa");
-  //   org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","pBb");
-  //   org2.propose(bytes32(""), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","pBbb");
-  //   org2.propose(bytes32(""), "00000000000000000000000000000042","c");
-  //   org2.getConsens(bytes32(""));
-  // }
+  function testCorrectlySwitchesToNewCandidate() {
+    org.vote(c_0a$, 100);
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_0a$));
+  }
+
+  function testCorrectlyVotesForMiddleCandidate() {
+    org.vote(c_1, 200);
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
+  }
+
+  function testCorrectlyPropagatesVotesDownTheTree() {
+    org.vote(c_1a, 10);
+    org.vote(c_1, 200);
+    assertTrue(__consensEq(org.getConsens(bytes32("")), c_1101$));
+  }
 
   function testSimpleConsensusConstruction() {
     bytes memory consensus = _constructConsensus(org, "");
@@ -71,7 +62,7 @@ contract OrgVoteDelegationTester is TypeDef, Test, Reporter, LangDefinitions {
   }
 
   function testSimpleParrallelVoting() {
-    org2.vote(org.getChildId("01","pqaa$"), 200 );
+    org2.vote(org.getChildId("pAa0a1$"), 200 );
     bytes memory consensus = _constructConsensus(org2, "");
     //@log consensus `bytes consensus`
   }

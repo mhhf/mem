@@ -14,6 +14,17 @@ class Rule {
   static addDelimiter() {
     _.each(Rule.rules, rule => rule.addDelimiter());
   }
+  
+  static _format() {
+    console.log(`digraph A {`);
+    _.each(Rule.rules, (rule, name) => {
+      _.each(rule.transitions, t => {
+        // console.log(`"${name.yellow}" -> "${t.join('" -> "')}";`);
+        console.log(`${name.yellow} -> ${t.map( cr => cr.terminal ).join(' ')}`);
+      });
+    });
+    console.log(`}`);
+  }
 
   static format() {
     console.log(`digraph A {`);

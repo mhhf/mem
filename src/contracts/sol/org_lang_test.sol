@@ -19,43 +19,45 @@ contract LangTester is Test, LangDefinitions {
   }
 
   // test start rule is final
-  function testStartRuleIsFinal() {
-    Org org = new Org(l_001);
-    assertTrue(org.isValide("$"));
-    assertTrue(org.isValide("a$"));
-    assertTrue(org.isValide("b$"));
-    assertTrue(org.isValide("abab$"));
-    Org org2 = new Org(l_002);
-    assertTrue(org2.isValide("$"));
-    assertTrue(org2.isValide("a$"));
-    assertTrue(org2.isValide("b$"));
-    assertTrue(org2.isValide("aaabb$"));
-  }
-
-  // function testCandidatesWithEndMark() {
+  // function testStartRuleIsFinal() {
   //   Org org = new Org(l_001);
-  //   assertTrue(org.isValide(c_aff));
-  //   assertTrue(org.isValide(c_bf));
-  //   assertFalse(org.isValide(c_cf));
+  //   assertTrue(org.isValide("$"));
+  //   assertTrue(org.isValide("a0$"));
+  //   assertTrue(org.isValide("baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  //   assertTrue(org.isValide("a0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  //   Org org2 = new Org(l_002);
+  //   assertTrue(org2.isValide("$"));
+  //   assertTrue(org2.isValide("a0$"));
+  //   assertTrue(org2.isValide("baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  //   assertTrue(org2.isValide("a0a0a0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  // }
+  //
+  // // test start rule is not final
+  // function testStartRuleIsNotFinal() {
+  //   Org org = new Org(l_003);
+  //   assertTrue(org.isValide("a1$"));
+  //   assertTrue(org.isValide("a1a1baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  //   assertFalse(org.isValide("baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa$"));
+  //   assertFalse(org.isValide("$"));
+  //   assertFalse(org.isValide("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac00000000000000000000000000000001$"));
+  // }
+  //
+  // function testParallelity() {
+  //   Org org = new Org(l_004);
   // }
 
-  // test start rule is not final
-  function testStartRuleIsNotFinal() {
-    Org org = new Org(l_003);
-    assertTrue(org.isValide("a$"));
-    assertTrue(org.isValide("aab$"));
-    assertFalse(org.isValide("b$"));
-    assertFalse(org.isValide("$"));
-    assertFalse(org.isValide("ac$"));
+  LL1.ParseTable table;
+  function testNestedParallelity() {
+    // Org org = new Org(l_006);
+    LL1.setup(table, l_006);
+    assertTrue(LL1.isValide(table, "p0a0p0a1c00000000000000000000000000000001$"));
   }
 
-  function testParallelity() {
-    Org org = new Org(l_004);
-  }
+  // function testDeployCfg() logs_gas {
+  //   Org org = new Org(l_005);
+  //   assertTrue(org.isValide("(a0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0)$"));
+  // }
 
-  function testDeployCfg() logs_gas {
-    Org org = new Org(l_005);
-    assertTrue(org.isValide("(aba)$"));
-  }
+
 
 }
