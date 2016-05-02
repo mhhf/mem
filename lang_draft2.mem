@@ -1,0 +1,10 @@
+
+start Name
+
+Name : String
+    (seq (mint 20 owner) (evolve Image) )
+    ;
+
+Num : Number '+' Number
+    (add $1 $2)
+    ;
