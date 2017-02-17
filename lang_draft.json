@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "title": "something",
+  "required": ["header"],
+  "properties": {
+    "header": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "summery": {
+          "type": "string"
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "title": "feature"
+      }
+    }
+  }
+}
